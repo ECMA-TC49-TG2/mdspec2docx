@@ -3,7 +3,9 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using FSharp.Markdown;
+using FSharp.Formatting.Common;
 using Grammar2Html;
+using Microsoft.FSharp.Core;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -172,8 +174,8 @@ class MarkdownSpec
 
         public SectionRef(MarkdownParagraph.Heading mdh, string filename)
         {
-            Level = mdh.Item1;
-            var spans = mdh.Item2;
+            Level = mdh.size;
+            var spans = mdh.body;
             if (spans.Length == 1 && spans.First().IsLiteral)
             {
                 Title = mdunescape(spans.First() as MarkdownSpan.Literal).Trim();
@@ -181,7 +183,7 @@ class MarkdownSpec
             }
             else if (spans.Length == 1 && spans.First().IsInlineCode)
             {
-                Title = (spans.First() as MarkdownSpan.InlineCode).Item.Trim();
+                Title = (spans.First() as MarkdownSpan.InlineCode).code.Trim();
                 MarkdownTitle = "`" + Title + "`";
             }
             else
@@ -402,7 +404,7 @@ class MarkdownSpec
                 else if (mdp.IsCodeBlock)
                 {
                     var mdc = mdp as MarkdownParagraph.CodeBlock;
-                    string code = mdc.Item1, lang = mdc.Item2;
+                    string code = mdc.code, lang = mdc.language;
                     if (lang != "antlr") continue;
                     var g = Antlr.ReadString(code, "");
                     Productions.Add(new ProductionRef(code, g.Productions));
@@ -504,14 +506,14 @@ class MarkdownSpec
     {
         if (!mdp.IsParagraph) return level;
         var p = mdp as MarkdownParagraph.Paragraph;
-        var spans = p.Item;
+        var spans = p.body;
         if (spans.Count() == 0 || !spans[0].IsLiteral) return level;
         var literal = spans[0] as MarkdownSpan.Literal;
-        if (!literal.Item.StartsWith("ceci-n'est-pas-une-indent")) return level;
+        if (!literal.text.StartsWith("ceci-n'est-pas-une-indent")) return level;
         //
-        var literal2 = MarkdownSpan.NewLiteral(literal.Item.Substring(25));
+        var literal2 = MarkdownSpan.NewLiteral(literal.text.Substring(25), FSharpOption<MarkdownRange>.None);
         var spans2 = Microsoft.FSharp.Collections.FSharpList<MarkdownSpan>.Cons(literal2, spans.Tail);
-        var p2 = MarkdownParagraph.NewParagraph(spans2);
+        var p2 = MarkdownParagraph.NewParagraph(spans2, FSharpOption<MarkdownRange>.None);
         mdp = p2;
         return 0;
     }
@@ -693,7 +695,7 @@ class MarkdownSpec
     }
 
     public static string mdunescape(MarkdownSpan.Literal literal) =>
-        literal.Item.Replace("&amp;", "&").Replace("&lt;", "<").Replace("&gt;", ">").Replace("&reg;", "®");
+        literal.text.Replace("&amp;", "&").Replace("&lt;", "<").Replace("&gt;", ">").Replace("&reg;", "®");
 
 
     private class MarkdownConverter
@@ -726,8 +728,8 @@ class MarkdownSpec
             if (md.IsHeading)
             {
                 var mdh = md as MarkdownParagraph.Heading;
-                var level = mdh.Item1;
-                var spans = mdh.Item2;
+                var level = mdh.size;
+                var spans = mdh.body;
                 var sr = Sections[new SectionRef(mdh, Filename).Url];
                 Report.CurrentSection = sr;
                 var props = new ParagraphProperties(new ParagraphStyleId() { Val = $"Heading{level}" });
@@ -747,7 +749,7 @@ class MarkdownSpec
             else if (md.IsParagraph)
             {
                 var mdp = md as MarkdownParagraph.Paragraph;
-                var spans = mdp.Item;
+                var spans = mdp.body;
                 yield return new Paragraph(Spans2Elements(spans));
                 yield break;
             }
@@ -809,7 +811,7 @@ class MarkdownSpec
                     var content = item.Paragraph;
                     if (content.IsParagraph || content.IsSpan)
                     {
-                        var spans = (content.IsParagraph ? (content as MarkdownParagraph.Paragraph).Item : (content as MarkdownParagraph.Span).Item);
+                        var spans = (content.IsParagraph ? (content as MarkdownParagraph.Paragraph).body : (content as MarkdownParagraph.Span).body);
                         if (item.HasBullet) yield return new Paragraph(Spans2Elements(spans)) { ParagraphProperties = new ParagraphProperties(new NumberingProperties(new ParagraphStyleId { Val = "ListParagraph" }, new NumberingLevelReference { Val = item.Level }, new NumberingId { Val = nid })) };
                         else yield return new Paragraph(Spans2Elements(spans)) { ParagraphProperties = new ParagraphProperties(new Indentation { Left = calcIndent(item.Level) }) };
                     }
@@ -848,8 +850,8 @@ class MarkdownSpec
             else if (md.IsCodeBlock)
             {
                 var mdc = md as MarkdownParagraph.CodeBlock;
-                var code = mdc.Item1;
-                var lang = mdc.Item2;
+                var code = mdc.code;
+                var lang = mdc.language;
                 code = BugWorkaroundDecode(code);
                 var runs = new List<Run>();
                 var onFirstLine = true;
@@ -894,9 +896,9 @@ class MarkdownSpec
             else if (md.IsTableBlock)
             {
                 var mdt = md as MarkdownParagraph.TableBlock;
-                var header = mdt.Item1.Option();
-                var align = mdt.Item2;
-                var rows = mdt.Item3;
+                var header = mdt.headers.Option();
+                var align = mdt.alignments;
+                var rows = mdt.rows;
                 var table = new Table();
                 if (header == null) Report.Error("MD10", "Github requires all tables to have header rows");
                 if (!header.Any(cell => cell.Length > 0)) header = null; // even if Github requires an empty header, we can at least cull it from Docx
@@ -975,8 +977,8 @@ class MarkdownSpec
 
         IEnumerable<FlatItem> FlattenList(MarkdownParagraph.ListBlock md, int level)
         {
-            var isOrdered = md.Item1.IsOrdered;
-            var items = md.Item2;
+            var isOrdered = md.kind.IsOrdered;
+            var items = md.items;
             foreach (var mdpars in items)
             {
                 var isFirstParagraph = true;
@@ -1028,7 +1030,7 @@ class MarkdownSpec
 
             else if (md.IsStrong || md.IsEmphasis)
             {
-                IEnumerable<MarkdownSpan> spans = (md.IsStrong ? (md as MarkdownSpan.Strong).Item : (md as MarkdownSpan.Emphasis).Item);
+                IEnumerable<MarkdownSpan> spans = (md.IsStrong ? (md as MarkdownSpan.Strong).body : (md as MarkdownSpan.Emphasis).body);
 
                 // Workaround for https://github.com/tpetricek/FSharp.formatting/issues/389 - the markdown parser
                 // turns *this_is_it* into a nested Emphasis["this", Emphasis["is"], "it"] instead of Emphasis["this_is_it"]
@@ -1038,11 +1040,11 @@ class MarkdownSpec
                     var spans2 = spans.Select(s =>
                     {
                         var _ = "";
-                        if (s.IsEmphasis) { s = (s as MarkdownSpan.Emphasis).Item.Single(); _ = "_"; }
-                        if (s.IsLiteral) return _ + (s as MarkdownSpan.Literal).Item + _;
+                        if (s.IsEmphasis) { s = (s as MarkdownSpan.Emphasis).body.Single(); _ = "_"; }
+                        if (s.IsLiteral) return _ + (s as MarkdownSpan.Literal).text + _;
                         Report.Error("MD15", $"something odd inside emphasis '{s.GetType().Name}' - only allowed emphasis and literal"); return "";
                     });
-                    spans = new List<MarkdownSpan>() { MarkdownSpan.NewLiteral(string.Join("", spans2)) };
+                    spans = new List<MarkdownSpan>() { MarkdownSpan.NewLiteral(string.Join("", spans2), FSharpOption<MarkdownRange>.None) };
                 }
 
                 // Convention is that ***term*** is used to define a term.
@@ -1051,10 +1053,10 @@ class MarkdownSpec
                 TermRef termdef = null;
                 if (!nestedSpan && md.IsStrong && spans.Count() == 1 && spans.First().IsEmphasis)
                 {
-                    var spans2 = (spans.First() as MarkdownSpan.Emphasis).Item;
+                    var spans2 = (spans.First() as MarkdownSpan.Emphasis).body;
                     if (spans2.Count() == 1 && spans2.First().IsLiteral)
                     {
-                        literal = (spans2.First() as MarkdownSpan.Literal).Item;
+                        literal = (spans2.First() as MarkdownSpan.Literal).text;
                         termdef = new TermRef(literal, Report.Location);
                         if (Terms.ContainsKey(literal))
                         {
@@ -1072,7 +1074,7 @@ class MarkdownSpec
                 if (!nestedSpan && md.IsEmphasis && (spans.Count() != 1 || !spans.First().IsLiteral)) Report.Error("MD17", $"something odd inside emphasis");
                 if (!nestedSpan && md.IsEmphasis && spans.Count() == 1 && spans.First().IsLiteral)
                 {
-                    literal = (spans.First() as MarkdownSpan.Literal).Item;
+                    literal = (spans.First() as MarkdownSpan.Literal).text;
                     prodref = Productions.FirstOrDefault(pr => pr.ProductionNames.Contains(literal));
                     Italics.Add(new ItalicUse(literal, prodref != null ? ItalicUse.ItalicUseKind.Production : ItalicUse.ItalicUseKind.Italic, Report.Location));
                 }
@@ -1107,7 +1109,7 @@ class MarkdownSpec
             else if (md.IsInlineCode)
             {
                 var mdi = md as MarkdownSpan.InlineCode;
-                var code = mdi.Item;
+                var code = mdi.code;
 
                 var txt = new Text(BugWorkaroundDecode(code)) { Space = SpaceProcessingModeValues.Preserve };
                 var props = new RunProperties(new RunStyle { Val = "CodeEmbedded" });
@@ -1122,16 +1124,16 @@ class MarkdownSpec
                 if (md.IsDirectLink)
                 {
                     var mddl = md as MarkdownSpan.DirectLink;
-                    spans = mddl.Item1;
-                    url = mddl.Item2.Item1;
-                    alt = mddl.Item2.Item2.Option();
+                    spans = mddl.body;
+                    url = mddl.link;
+                    alt = mddl.title.Option();
                 }
                 else
                 {
                     var mdil = md as MarkdownSpan.IndirectLink;
-                    var original = mdil.Item2;
-                    var id = mdil.Item3;
-                    spans = mdil.Item1;
+                    var original = mdil.original;
+                    var id = mdil.key;
+                    spans = mdil.body;
                     if (Mddoc.DefinedLinks.ContainsKey(id))
                     {
                         url = Mddoc.DefinedLinks[id].Item1;
@@ -1141,7 +1143,7 @@ class MarkdownSpec
 
                 var anchor = "";
                 if (spans.Count() == 1 && spans.First().IsLiteral) anchor = mdunescape(spans.First() as MarkdownSpan.Literal);
-                else if (spans.Count() == 1 && spans.First().IsInlineCode) anchor = (spans.First() as MarkdownSpan.InlineCode).Item;
+                else if (spans.Count() == 1 && spans.First().IsInlineCode) anchor = (spans.First() as MarkdownSpan.InlineCode).code;
                 else { Report.Error("MD18", $"Link anchor must be Literal or InlineCode, not '{md.GetType().Name}'"); yield break; }
 
                 if (Sections.ContainsKey(url))

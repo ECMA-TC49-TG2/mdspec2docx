@@ -124,13 +124,13 @@ static class Program
             foreach (var list in readme.Paragraphs.OfType<FSharp.Markdown.MarkdownParagraph.ListBlock>())
             {
                 var pp = new List<Tuple<int, FSharp.Markdown.MarkdownParagraph>>();
-                foreach (var pars in list.Item2)
+                foreach (var pars in list.items)
                 {
                     foreach (var par in pars)
                     {
                         pp.Add(Tuple.Create(1, par));
                         var sublist = par as FSharp.Markdown.MarkdownParagraph.ListBlock;
-                        if (sublist != null) pp.AddRange(from subpars in sublist.Item2
+                        if (sublist != null) pp.AddRange(from subpars in sublist.items
                                                          from subpar in subpars
                                                          select Tuple.Create(2, subpar));
                     }
@@ -140,10 +140,10 @@ static class Program
                     var level = tpp.Item1;
                     var spanpar = tpp.Item2 as FSharp.Markdown.MarkdownParagraph.Span;
                     if (spanpar == null) continue;
-                    var links = spanpar.Item.OfType<FSharp.Markdown.MarkdownSpan.DirectLink>();
+                    var links = spanpar.body.OfType<FSharp.Markdown.MarkdownSpan.DirectLink>();
                     urls.AddRange(from link in links
-                                  let title = string.Join("",link.Item1.OfType<FSharp.Markdown.MarkdownSpan.Literal>().Select(l => l.Item))
-                                  let url = link.Item2.Item1
+                                  let title = string.Join("",link.body.OfType<FSharp.Markdown.MarkdownSpan.Literal>().Select(l => l.text))
+                                  let url = link.link
                                   where url.ToLower().EndsWith(".md") || url.ToLower().Contains(".md#")
                                   let loc = new SourceLocation(ireadmefile, null, list, link)
                                   select Tuple.Create(level, title, url, loc));

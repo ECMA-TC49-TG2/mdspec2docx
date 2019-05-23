@@ -252,49 +252,49 @@ class Fuzzy
         else if (md.IsStrong)
         {
             var mds = md as MarkdownSpan.Strong;
-            foreach (var s in Spans2Words(mds.Item)) yield return s;
+            foreach (var s in Spans2Words(mds.body)) yield return s;
         }
         else if (md.IsEmphasis)
         {
             var mde = md as MarkdownSpan.Emphasis;
-            foreach (var s in Spans2Words(mde.Item)) yield return s;
+            foreach (var s in Spans2Words(mde.body)) yield return s;
         }
         else if (md.IsInlineCode)
         {
             var mdi = md as MarkdownSpan.InlineCode;
-            foreach (var s in String2Words(mdi.Item)) yield return s;
+            foreach (var s in String2Words(mdi.code)) yield return s;
         }
         else if (md.IsDirectLink)
         {
             var mdl = md as MarkdownSpan.DirectLink;
-            foreach (var s in Spans2Words(mdl.Item1)) yield return s;
-            foreach (var s in String2Words(mdl.Item2.Item2.Option())) yield return s;
+            foreach (var s in Spans2Words(mdl.body)) yield return s;
+            foreach (var s in String2Words(mdl.title.Option())) yield return s;
         }
         else if (md.IsIndirectLink)
         {
             var mdl = md as MarkdownSpan.DirectLink;
-            foreach (var s in Spans2Words(mdl.Item1)) yield return s;
-            foreach (var s in String2Words(mdl.Item2.Item1)) yield return s;
-            foreach (var s in String2Words(mdl.Item2.Item2.Option())) yield return s;
+            foreach (var s in Spans2Words(mdl.body)) yield return s;
+            foreach (var s in String2Words(mdl.link)) yield return s;
+            foreach (var s in String2Words(mdl.title.Option())) yield return s;
         }
         else if (md.IsAnchorLink)
         {
             var mdl = md as MarkdownSpan.AnchorLink;
-            foreach (var s in String2Words(mdl.Item)) yield return s;
+            foreach (var s in String2Words(mdl.link)) yield return s;
         }
         else if (md.IsDirectImage)
         {
             var mdi = md as MarkdownSpan.DirectImage;
-            foreach (var s in String2Words(mdi.Item1)) yield return s;
-            foreach (var s in String2Words(mdi.Item2.Item1)) yield return s;
-            foreach (var s in String2Words(mdi.Item2.Item2.Option())) yield return s;
+            foreach (var s in String2Words(mdi.body)) yield return s;
+            foreach (var s in String2Words(mdi.link)) yield return s;
+            foreach (var s in String2Words(mdi.title.Option())) yield return s;
         }
         else if (md.IsIndirectImage)
         {
             var mdi = md as MarkdownSpan.IndirectImage;
-            foreach (var s in String2Words(mdi.Item1)) yield return s;
-            foreach (var s in String2Words(mdi.Item2)) yield return s;
-            foreach (var s in String2Words(mdi.Item3)) yield return s;
+            foreach (var s in String2Words(mdi.body)) yield return s;
+            foreach (var s in String2Words(mdi.link)) yield return s;
+            foreach (var s in String2Words(mdi.key)) yield return s;
         }
         else if (md.IsEmbedSpans)
         {
@@ -305,12 +305,12 @@ class Fuzzy
         else if (md.IsLatexDisplayMath)
         {
             var mdl = md as MarkdownSpan.LatexDisplayMath;
-            foreach (var s in String2Words(mdl.Item)) yield return s;
+            foreach (var s in String2Words(mdl.code)) yield return s;
         }
         else if (md.IsLatexInlineMath)
         {
             var mdl = md as MarkdownSpan.LatexInlineMath;
-            foreach (var s in String2Words(mdl.Item)) yield return s;
+            foreach (var s in String2Words(mdl.code)) yield return s;
         }
     }
 
@@ -324,32 +324,32 @@ class Fuzzy
         if (md.IsHeading)
         {
             var mdh = md as MarkdownParagraph.Heading;
-            foreach (var s in Spans2Words(mdh.Item2)) yield return s;
+            foreach (var s in Spans2Words(mdh.body)) yield return s;
         }
         else if (md.IsParagraph)
         {
             var mdp = md as MarkdownParagraph.Paragraph;
-            foreach (var s in Spans2Words(mdp.Item)) yield return s;
+            foreach (var s in Spans2Words(mdp.body)) yield return s;
         }
         else if (md.IsListBlock)
         {
             var mdl = md as MarkdownParagraph.ListBlock;
-            foreach (var bullet in mdl.Item2) foreach (var s in Paragraphs2Words(bullet)) yield return s;
+            foreach (var bullet in mdl.items) foreach (var s in Paragraphs2Words(bullet)) yield return s;
         }
         else if (md.IsCodeBlock)
         {
             var mdc = md as MarkdownParagraph.CodeBlock;
-            var code = mdc.Item1;
-            var lang = mdc.Item2?.Trim();
+            var code = mdc.code;
+            var lang = mdc.language?.Trim();
             if (!string.IsNullOrWhiteSpace(lang)) yield return lang;
             foreach (var s in String2Words(code)) yield return s;
         }
         else if (md.IsTableBlock)
         {
             var mdt = md as MarkdownParagraph.TableBlock;
-            var header = mdt.Item1.Option();
-            var align = mdt.Item2;
-            var rows = mdt.Item3;
+            var header = mdt.headers.Option();
+            var align = mdt.alignments;
+            var rows = mdt.rows;
             foreach (var col in header) foreach (var s in Paragraphs2Words(col)) yield return s;
             foreach (var row in rows) foreach (var col in row) foreach (var s in Paragraphs2Words(col)) yield return s;
         }
@@ -362,22 +362,22 @@ class Fuzzy
         else if (md.IsInlineBlock)
         {
             var mdi = md as MarkdownParagraph.InlineBlock;
-            foreach (var s in String2Words(mdi.Item)) yield return s;
+            foreach (var s in String2Words(mdi.code)) yield return s;
         }
         else if (md.IsLatexBlock)
         {
             var mdl = md as MarkdownParagraph.LatexBlock;
-            foreach (var str in mdl.Item) foreach (var s in String2Words(str)) yield return s;
+            foreach (var str in mdl.body) foreach (var s in String2Words(str)) yield return s;
         }
         else if (md.IsQuotedBlock)
         {
             var mdq = md as MarkdownParagraph.QuotedBlock;
-            foreach (var s in Paragraphs2Words(mdq.Item)) yield return s;
+            foreach (var s in Paragraphs2Words(mdq.paragraphs)) yield return s;
         }
         else if (md.IsSpan)
         {
             var mds = md as MarkdownParagraph.Span;
-            foreach (var s in Spans2Words(mds.Item)) yield return s;
+            foreach (var s in Spans2Words(mds.body)) yield return s;
         }
     }
 
