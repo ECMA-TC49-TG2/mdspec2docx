@@ -1,15 +1,15 @@
 ﻿{
   "dependencies": {
     "csharp2colorized": "1.0.3",
-    "DocumentFormat.OpenXml": "2.5.0",
-    "FSharp.Core": "4.0.0.1",
-    "FSharp.Formatting": "2.14.4",
-    "Microsoft.CodeAnalysis": "1.2.2",
-    "Newtonsoft.Json": "8.0.3",
-    "NuGet.CommandLine": "3.4.3"
+    "DocumentFormat.OpenXml": "2.9.1",
+    "FSharp.Core": "4.6.2",
+    "FSharp.Formatting": "3.1.0",
+    "Microsoft.CodeAnalysis": "3.1.0",
+    "Newtonsoft.Json": "12.0.2",
+    "NuGet.CommandLine": "5.0.2"
   },
   "frameworks": {
-    "net46": {}
+    "net472": {}
   },
   "runtimes": {
     "win": {}
