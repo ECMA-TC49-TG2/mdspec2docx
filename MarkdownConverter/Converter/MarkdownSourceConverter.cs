@@ -16,48 +16,66 @@ namespace MarkdownConverter.Converter
 {
     internal class MarkdownSourceConverter
     {
-        public MarkdownDocument Mddoc;
-        public WordprocessingDocument Wdoc;
-        public Dictionary<string, SectionRef> Sections;
-        public List<ProductionRef> Productions;
-        public Dictionary<string, TermRef> Terms;
-        public List<string> TermKeys;
-        public List<ItalicUse> Italics;
-        public StrongBox<int> MaxBookmarkId;
-        public string Filename;
-        public string CurrentSection;
-        public Reporter Report;
+        private readonly MarkdownDocument markdownDocument;
+        private readonly WordprocessingDocument wordDocument;
+        private readonly Dictionary<string, SectionRef> sections;
+        private readonly List<ProductionRef> productions;
+        private readonly Dictionary<string, TermRef> terms;
+        private readonly List<string> termKeys;
+        private readonly List<ItalicUse> italics;
+        private readonly StrongBox<int> maxBookmarkId;
+        private readonly string filename;
+        private readonly Reporter reporter;
 
-        public IEnumerable<OpenXmlCompositeElement> Paragraphs()
-            => Paragraphs2Paragraphs(Mddoc.Paragraphs);
-
-        IEnumerable<OpenXmlCompositeElement> Paragraphs2Paragraphs(IEnumerable<MarkdownParagraph> pars)
+        public MarkdownSourceConverter(
+            MarkdownDocument markdownDocument,
+            WordprocessingDocument wordDocument,
+            MarkdownSpec spec,
+            Dictionary<string, TermRef> terms,
+            List<string> termKeys,
+            List<ItalicUse> italics,
+            StrongBox<int> maxBookmarkId,
+            string filename)
         {
-            foreach (var md in pars) foreach (var p in Paragraph2Paragraphs(md)) yield return p;
+            this.markdownDocument = markdownDocument;
+            this.wordDocument = wordDocument;
+            sections = spec.Sections.ToDictionary(sr => sr.Url);
+            productions = spec.Productions;
+            this.terms = terms;
+            this.termKeys = termKeys;
+            this.italics = italics;
+            this.maxBookmarkId = maxBookmarkId;
+            this.filename = filename;
+            reporter = new Reporter { CurrentFile = filename };
         }
 
+        public IEnumerable<OpenXmlCompositeElement> Paragraphs() =>
+            Paragraphs2Paragraphs(markdownDocument.Paragraphs);
+
+        IEnumerable<OpenXmlCompositeElement> Paragraphs2Paragraphs(IEnumerable<MarkdownParagraph> pars) =>
+            pars.SelectMany(md => Paragraph2Paragraphs(md));
 
         IEnumerable<OpenXmlCompositeElement> Paragraph2Paragraphs(MarkdownParagraph md)
         {
-            Report.CurrentParagraph = md;
+            reporter.CurrentParagraph = md;
             if (md.IsHeading)
             {
                 var mdh = md as MarkdownParagraph.Heading;
                 var level = mdh.size;
                 var spans = mdh.body;
-                var sr = Sections[new SectionRef(mdh, Filename).Url];
-                Report.CurrentSection = sr;
+                var sr = sections[new SectionRef(mdh, filename).Url];
+                reporter.CurrentSection = sr;
                 var props = new ParagraphProperties(new ParagraphStyleId() { Val = $"Heading{level}" });
                 var p = new Paragraph { ParagraphProperties = props };
-                MaxBookmarkId.Value += 1;
-                p.AppendChild(new BookmarkStart { Name = sr.BookmarkName, Id = MaxBookmarkId.Value.ToString() });
+                maxBookmarkId.Value += 1;
+                p.AppendChild(new BookmarkStart { Name = sr.BookmarkName, Id = maxBookmarkId.Value.ToString() });
                 p.Append(Spans2Elements(spans));
-                p.AppendChild(new BookmarkEnd { Id = MaxBookmarkId.Value.ToString() });
+                p.AppendChild(new BookmarkEnd { Id = maxBookmarkId.Value.ToString() });
                 yield return p;
-                //
+                
                 var i = sr.Url.IndexOf("#");
-                CurrentSection = $"{sr.Url.Substring(0, i)} {new string('#', level)} {sr.Title} [{sr.Number}]";
-                Report.Log(CurrentSection);
+                string currentSection = $"{sr.Url.Substring(0, i)} {new string('#', level)} {sr.Title} [{sr.Number}]";
+                reporter.Log(currentSection);
                 yield break;
             }
 
@@ -79,7 +97,7 @@ namespace MarkdownConverter.Converter
                 foreach (var item in flat) format0[item.Level] = (item.IsBulletOrdered ? "1" : "o");
                 var format = string.Join("", format0);
 
-                var numberingPart = Wdoc.MainDocumentPart.NumberingDefinitionsPart ?? Wdoc.MainDocumentPart.AddNewPart<NumberingDefinitionsPart>("NumberingDefinitionsPart001");
+                var numberingPart = wordDocument.MainDocumentPart.NumberingDefinitionsPart ?? wordDocument.MainDocumentPart.AddNewPart<NumberingDefinitionsPart>("NumberingDefinitionsPart001");
                 if (numberingPart.Numbering == null) numberingPart.Numbering = new Numbering();
 
                 Func<int, bool, Level> createLevel;
@@ -157,7 +175,7 @@ namespace MarkdownConverter.Converter
                     }
                     else
                     {
-                        Report.Error("MD08", $"Unexpected item in list '{content.GetType().Name}'");
+                        reporter.Error("MD08", $"Unexpected item in list '{content.GetType().Name}'");
                     }
                 }
             }
@@ -191,7 +209,7 @@ namespace MarkdownConverter.Converter
                         lines = Antlr.ColorizeAntlr(code);
                         break;
                     default:
-                        Report.Error("MD09", $"unrecognized language {lang}");
+                        reporter.Error("MD09", $"unrecognized language {lang}");
                         lines = Colorize.PlainText(code);
                         break;
                 }
@@ -213,11 +231,11 @@ namespace MarkdownConverter.Converter
                 if (lang == "antlr")
                 {
                     var p = new Paragraph() { ParagraphProperties = new ParagraphProperties(new ParagraphStyleId { Val = "Grammar" }) };
-                    var prodref = Productions.Single(prod => prod.Code == code);
-                    MaxBookmarkId.Value += 1;
-                    p.AppendChild(new BookmarkStart { Name = prodref.BookmarkName, Id = MaxBookmarkId.Value.ToString() });
+                    var prodref = productions.Single(prod => prod.Code == code);
+                    maxBookmarkId.Value += 1;
+                    p.AppendChild(new BookmarkStart { Name = prodref.BookmarkName, Id = maxBookmarkId.Value.ToString() });
                     p.Append(runs);
-                    p.AppendChild(new BookmarkEnd { Id = MaxBookmarkId.Value.ToString() });
+                    p.AppendChild(new BookmarkEnd { Id = maxBookmarkId.Value.ToString() });
                     yield return p;
                 }
                 else
@@ -235,7 +253,7 @@ namespace MarkdownConverter.Converter
                 var align = mdt.alignments;
                 var rows = mdt.rows;
                 var table = new Table();
-                if (header == null) Report.Error("MD10", "Github requires all tables to have header rows");
+                if (header == null) reporter.Error("MD10", "Github requires all tables to have header rows");
                 if (!header.Any(cell => cell.Length > 0)) header = null; // even if Github requires an empty header, we can at least cull it from Docx
                 var tstyle = new TableStyle { Val = "TableGrid" };
                 var tindent = new TableIndentation { Width = 360, Type = TableWidthUnitValues.Dxa };
@@ -281,7 +299,7 @@ namespace MarkdownConverter.Converter
             }
             else
             {
-                Report.Error("MD11", $"Unrecognized markdown element {md.GetType().Name}");
+                reporter.Error("MD11", $"Unrecognized markdown element {md.GetType().Name}");
                 yield return new Paragraph(new Run(new Text($"[{md.GetType().Name}]")));
             }
         }
@@ -295,9 +313,9 @@ namespace MarkdownConverter.Converter
                 var level = item.Level;
                 var isItemOrdered = item.IsBulletOrdered;
                 var content = item.Paragraph;
-                if (isOrdered.ContainsKey(level) && isOrdered[level] != isItemOrdered) Report.Error("MD12", "List can't mix ordered and unordered items at same level");
+                if (isOrdered.ContainsKey(level) && isOrdered[level] != isItemOrdered) reporter.Error("MD12", "List can't mix ordered and unordered items at same level");
                 isOrdered[level] = isItemOrdered;
-                if (level > 3) Report.Error("MD13", "Can't have more than 4 levels in a list");
+                if (level > 3) reporter.Error("MD13", "Can't have more than 4 levels in a list");
             }
             return flat;
         }
@@ -333,7 +351,7 @@ namespace MarkdownConverter.Converter
                     }
                     else
                     {
-                        Report.Error("MD14", $"nothing fancy allowed in lists - specifically not '{mdp.GetType().Name}'");
+                        reporter.Error("MD14", $"nothing fancy allowed in lists - specifically not '{mdp.GetType().Name}'");
                     }
                 }
             }
@@ -347,7 +365,7 @@ namespace MarkdownConverter.Converter
 
         IEnumerable<OpenXmlElement> Span2Elements(MarkdownSpan md, bool nestedSpan = false)
         {
-            Report.CurrentSpan = md;
+            reporter.CurrentSpan = md;
             if (md.IsLiteral)
             {
                 var mdl = md as MarkdownSpan.Literal;
@@ -369,7 +387,7 @@ namespace MarkdownConverter.Converter
                         var _ = "";
                         if (s.IsEmphasis) { s = (s as MarkdownSpan.Emphasis).body.Single(); _ = "_"; }
                         if (s.IsLiteral) return _ + (s as MarkdownSpan.Literal).text + _;
-                        Report.Error("MD15", $"something odd inside emphasis '{s.GetType().Name}' - only allowed emphasis and literal"); return "";
+                        reporter.Error("MD15", $"something odd inside emphasis '{s.GetType().Name}' - only allowed emphasis and literal"); return "";
                     });
                     spans = new List<MarkdownSpan>() { MarkdownSpan.NewLiteral(string.Join("", spans2), FSharpOption<MarkdownRange>.None) };
                 }
@@ -384,26 +402,26 @@ namespace MarkdownConverter.Converter
                     if (spans2.Count() == 1 && spans2.First().IsLiteral)
                     {
                         literal = (spans2.First() as MarkdownSpan.Literal).text;
-                        termdef = new TermRef(literal, Report.Location);
-                        if (Terms.ContainsKey(literal))
+                        termdef = new TermRef(literal, reporter.Location);
+                        if (terms.ContainsKey(literal))
                         {
-                            var def = Terms[literal];
-                            Report.Warning("MD16", $"Term '{literal}' defined a second time");
-                            Report.Warning("MD16b", $"Here was the previous definition of term '{literal}'", def.Loc);
+                            var def = terms[literal];
+                            reporter.Warning("MD16", $"Term '{literal}' defined a second time");
+                            reporter.Warning("MD16b", $"Here was the previous definition of term '{literal}'", def.Loc);
                         }
-                        else { Terms.Add(literal, termdef); TermKeys.Clear(); }
+                        else { terms.Add(literal, termdef); termKeys.Clear(); }
                     }
                 }
 
                 // Convention inside our specs is that emphasis only ever contains literals,
                 // either to emphasis some human-text or to refer to an ANTLR-production
                 ProductionRef prodref = null;
-                if (!nestedSpan && md.IsEmphasis && (spans.Count() != 1 || !spans.First().IsLiteral)) Report.Error("MD17", $"something odd inside emphasis");
+                if (!nestedSpan && md.IsEmphasis && (spans.Count() != 1 || !spans.First().IsLiteral)) reporter.Error("MD17", $"something odd inside emphasis");
                 if (!nestedSpan && md.IsEmphasis && spans.Count() == 1 && spans.First().IsLiteral)
                 {
                     literal = (spans.First() as MarkdownSpan.Literal).text;
-                    prodref = Productions.FirstOrDefault(pr => pr.ProductionNames.Contains(literal));
-                    Italics.Add(new ItalicUse(literal, prodref != null ? ItalicUse.ItalicUseKind.Production : ItalicUse.ItalicUseKind.Italic, Report.Location));
+                    prodref = productions.FirstOrDefault(pr => pr.ProductionNames.Contains(literal));
+                    italics.Add(new ItalicUse(literal, prodref != null ? ItalicUse.ItalicUseKind.Production : ItalicUse.ItalicUseKind.Italic, reporter.Location));
                 }
 
                 if (prodref != null)
@@ -415,11 +433,11 @@ namespace MarkdownConverter.Converter
                 }
                 else if (termdef != null)
                 {
-                    MaxBookmarkId.Value += 1;
-                    yield return new BookmarkStart { Name = termdef.BookmarkName, Id = MaxBookmarkId.Value.ToString() };
+                    maxBookmarkId.Value += 1;
+                    yield return new BookmarkStart { Name = termdef.BookmarkName, Id = maxBookmarkId.Value.ToString() };
                     var props = new RunProperties(new Italic(), new Bold());
                     yield return new Run(new Text(literal) { Space = SpaceProcessingModeValues.Preserve }) { RunProperties = props };
-                    yield return new BookmarkEnd { Id = MaxBookmarkId.Value.ToString() };
+                    yield return new BookmarkEnd { Id = maxBookmarkId.Value.ToString() };
                 }
                 else
                 {
@@ -461,22 +479,22 @@ namespace MarkdownConverter.Converter
                     var original = mdil.original;
                     var id = mdil.key;
                     spans = mdil.body;
-                    if (Mddoc.DefinedLinks.ContainsKey(id))
+                    if (markdownDocument.DefinedLinks.ContainsKey(id))
                     {
-                        url = Mddoc.DefinedLinks[id].Item1;
-                        alt = Mddoc.DefinedLinks[id].Item2.Option();
+                        url = markdownDocument.DefinedLinks[id].Item1;
+                        alt = markdownDocument.DefinedLinks[id].Item2.Option();
                     }
                 }
 
                 var anchor = "";
                 if (spans.Count() == 1 && spans.First().IsLiteral) anchor = MarkdownUtilities.UnescapeLiteral(spans.First() as MarkdownSpan.Literal);
                 else if (spans.Count() == 1 && spans.First().IsInlineCode) anchor = (spans.First() as MarkdownSpan.InlineCode).code;
-                else { Report.Error("MD18", $"Link anchor must be Literal or InlineCode, not '{md.GetType().Name}'"); yield break; }
+                else { reporter.Error("MD18", $"Link anchor must be Literal or InlineCode, not '{md.GetType().Name}'"); yield break; }
 
-                if (Sections.ContainsKey(url))
+                if (sections.ContainsKey(url))
                 {
-                    var section = Sections[url];
-                    if (anchor != section.Title) Report.Warning("MD19", $"Mismatch: link anchor is '{anchor}', should be '{section.Title}'");
+                    var section = sections[url];
+                    if (anchor != section.Title) reporter.Warning("MD19", $"Mismatch: link anchor is '{anchor}', should be '{section.Title}'");
                     var txt = new Text("§" + section.Number) { Space = SpaceProcessingModeValues.Preserve };
                     var run = new Hyperlink(new Run(txt)) { Anchor = section.BookmarkName };
                     yield return run;
@@ -495,7 +513,7 @@ namespace MarkdownConverter.Converter
                 }
                 else
                 {
-                    Report.Error("MD20", $"Hyperlink url '{url}' unrecognized - not a recognized heading, and not http");
+                    reporter.Error("MD20", $"Hyperlink url '{url}' unrecognized - not a recognized heading, and not http");
                 }
             }
 
@@ -506,7 +524,7 @@ namespace MarkdownConverter.Converter
 
             else
             {
-                Report.Error("MD20", $"Unrecognized markdown element {md.GetType().Name}");
+                reporter.Error("MD20", $"Unrecognized markdown element {md.GetType().Name}");
                 yield return new Run(new Text($"[{md.GetType().Name}]"));
             }
         }
@@ -566,15 +584,15 @@ namespace MarkdownConverter.Converter
 
         IEnumerable<OpenXmlElement> Literal2Elements(string literal, bool isNested)
         {
-            if (isNested || Terms.Count == 0)
+            if (isNested || terms.Count == 0)
             {
                 yield return new Run(new Text(literal) { Space = SpaceProcessingModeValues.Preserve });
                 yield break;
             }
 
-            if (TermKeys.Count == 0) TermKeys.AddRange(Terms.Keys);
+            if (termKeys.Count == 0) termKeys.AddRange(terms.Keys);
 
-            foreach (var needle in FindNeedles(TermKeys, literal))
+            foreach (var needle in FindNeedles(termKeys, literal))
             {
                 var s = literal.Substring(needle.Start, needle.Length);
                 if (needle.NeedleId == -1)
@@ -582,8 +600,8 @@ namespace MarkdownConverter.Converter
                     yield return new Run(new Text(s) { Space = SpaceProcessingModeValues.Preserve });
                     continue;
                 }
-                var termref = Terms[s];
-                Italics.Add(new ItalicUse(s, ItalicUse.ItalicUseKind.Term, Report.Location));
+                var termref = terms[s];
+                italics.Add(new ItalicUse(s, ItalicUse.ItalicUseKind.Term, reporter.Location));
                 var props = new RunProperties(new Underline { Val = UnderlineValues.Dotted, Color = "4BACC6" });
                 var run = new Run(new Text(s) { Space = SpaceProcessingModeValues.Preserve }) { RunProperties = props };
                 var link = new Hyperlink(run) { Anchor = termref.BookmarkName };

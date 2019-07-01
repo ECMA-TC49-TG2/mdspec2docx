@@ -9,7 +9,7 @@ namespace MarkdownConverter.Spec
     /// </summary>
     internal class Reporter
     {
-        public SourceLocation Location = new SourceLocation(null, null, null, null);
+        public SourceLocation Location { get; set; } = new SourceLocation(null, null, null, null);
 
         public string CurrentFile
         {

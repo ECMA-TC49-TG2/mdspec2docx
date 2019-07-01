@@ -57,31 +57,22 @@ namespace MarkdownConverter.Converter
 
                 foreach (var src in spec.Sources)
                 {
-                    // FIXME: Ick
-                    spec.Report.CurrentFile = Path.GetFullPath(src.Item1);
-                    var converter = new MarkdownSourceConverter
-                    {
-                        Mddoc = src.Item2,
-                        Filename = Path.GetFileName(src.Item1),
-                        Wdoc = resultDoc,
-                        Sections = spec.Sections.ToDictionary(sr => sr.Url),
-                        Productions = spec.Productions,
-                        Terms = terms,
-                        TermKeys = termkeys,
-                        Italics = italics,
-                        MaxBookmarkId = maxBookmarkId,
-                        Report = spec.Report
-                    };
+                    var converter = new MarkdownSourceConverter(
+                        markdownDocument: src.Item2,
+                        wordDocument: resultDoc,
+                        spec: spec,
+                        terms: terms,
+                        termKeys: termkeys,
+                        italics: italics,
+                        maxBookmarkId: maxBookmarkId,
+                        filename: Path.GetFileName(src.Item1));
                     foreach (var p in converter.Paragraphs())
                     {
                         body.AppendChild(p);
                     }
                 }
 
-                spec.Report.CurrentFile = null;
-                spec.Report.CurrentSection = null;
-                spec.Report.CurrentParagraph = null;
-                spec.Report.CurrentSpan = null;
+                var reporter = new Reporter();
 
                 // I wonder if there were any oddities? ...
                 // Terms that were referenced before their definition?
@@ -92,8 +83,8 @@ namespace MarkdownConverter.Converter
                 {
                     var use = italics.First(i => i.Literal == s);
                     var def = terms[s];
-                    spec.Report.Warning("MD05", $"Term '{s}' used before definition", use.Loc);
-                    spec.Report.Warning("MD05b", $"... definition location of '{s}' for previous warning", def.Loc);
+                    reporter.Warning("MD05", $"Term '{s}' used before definition", use.Loc);
+                    reporter.Warning("MD05b", $"... definition location of '{s}' for previous warning", def.Loc);
                 }
 
                 // Terms that are also production names?
@@ -102,7 +93,7 @@ namespace MarkdownConverter.Converter
                 foreach (var s in productionset)
                 {
                     var def = terms[s];
-                    spec.Report.Warning("MD06", $"Terms '{s}' is also a grammar production name", def.Loc);
+                    reporter.Warning("MD06", $"Terms '{s}' is also a grammar production name", def.Loc);
                 }
 
                 // Terms that were defined but never used?
@@ -111,7 +102,7 @@ namespace MarkdownConverter.Converter
                 foreach (var s in termset)
                 {
                     var def = terms[s];
-                    spec.Report.Warning("MD07", $"Term '{s}' is defined but never used", def.Loc);
+                    reporter.Warning("MD07", $"Term '{s}' is defined but never used", def.Loc);
                 }
 
                 // Which single-word production-names appear in italics?
