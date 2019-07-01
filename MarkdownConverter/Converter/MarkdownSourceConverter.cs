@@ -298,11 +298,11 @@ namespace MarkdownConverter.Converter
                     {
                         var mdp1 = mdp;
                         var buglevel = BugWorkaroundIndent(ref mdp1, level);
-                        yield return new FlatItem { Level = buglevel, HasBullet = wasFirstParagraph, IsBulletOrdered = isOrdered, Paragraph = mdp1 };
+                        yield return new FlatItem(buglevel, wasFirstParagraph, isOrdered, mdp1);
                     }
                     else if (mdp.IsQuotedBlock || mdp.IsCodeBlock)
                     {
-                        yield return new FlatItem { Level = level, HasBullet = false, IsBulletOrdered = isOrdered, Paragraph = mdp };
+                        yield return new FlatItem(level, false, isOrdered, mdp);
                     }
                     else if (mdp.IsListBlock)
                     {
@@ -310,7 +310,7 @@ namespace MarkdownConverter.Converter
                     }
                     else if (mdp.IsTableBlock)
                     {
-                        yield return new FlatItem { Level = level, HasBullet = false, IsBulletOrdered = isOrdered, Paragraph = mdp };
+                        yield return new FlatItem(level, false, isOrdered, mdp);
                     }
                     else
                     {
@@ -497,9 +497,16 @@ namespace MarkdownConverter.Converter
         static IEnumerable<Needle> FindNeedles(IEnumerable<string> needles0, string haystack)
         {
             IList<string> needles = (needles0 as IList<string>) ?? new List<string>(needles0);
-            for (int i = 0; i < Math.Min(needleCounts.Count, needles.Count); i++) needleCounts[i] = 0;
-            while (needleCounts.Count < needles.Count) needleCounts.Add(0);
-            //
+            for (int i = 0; i < Math.Min(needleCounts.Count, needles.Count); i++)
+            {
+                needleCounts[i] = 0;
+            }
+
+            while (needleCounts.Count < needles.Count)
+            {
+                needleCounts.Add(0);
+            }
+            
             var xcount = 0;
             for (int ic = 0; ic < haystack.Length; ic++)
             {
@@ -512,10 +519,16 @@ namespace MarkdownConverter.Converter
                         needleCounts[i]++;
                         if (needleCounts[i] == needles[i].Length)
                         {
-                            if (xcount > needleCounts[i]) yield return new Needle { needle = -1, istart = ic + 1 - xcount, length = xcount - needleCounts[i] };
-                            yield return new Needle { needle = i, istart = ic + 1 - needleCounts[i], length = needleCounts[i] };
+                            if (xcount > needleCounts[i])
+                            {
+                                yield return new Needle(-1, ic + 1 - xcount, xcount - needleCounts[i]);
+                            }
+                            yield return new Needle(i, ic + 1 - needleCounts[i], needleCounts[i]);
                             xcount = 0;
-                            for (int j = 0; j < needles.Count; j++) needleCounts[j] = 0;
+                            for (int j = 0; j < needles.Count; j++)
+                            {
+                                needleCounts[j] = 0;
+                            }
                             break;
                         }
                     }
@@ -525,7 +538,10 @@ namespace MarkdownConverter.Converter
                     }
                 }
             }
-            if (xcount > 0) yield return new Needle { needle = -1, istart = haystack.Length - xcount, length = xcount };
+            if (xcount > 0)
+            {
+                yield return new Needle(-1, haystack.Length - xcount, xcount);
+            }
         }
 
 
@@ -541,8 +557,12 @@ namespace MarkdownConverter.Converter
 
             foreach (var needle in FindNeedles(TermKeys, literal))
             {
-                var s = literal.Substring(needle.istart, needle.length);
-                if (needle.needle == -1) { yield return new Run(new Text(s) { Space = SpaceProcessingModeValues.Preserve }); continue; }
+                var s = literal.Substring(needle.Start, needle.Length);
+                if (needle.NeedleId == -1)
+                {
+                    yield return new Run(new Text(s) { Space = SpaceProcessingModeValues.Preserve });
+                    continue;
+                }
                 var termref = Terms[s];
                 Italics.Add(new ItalicUse(s, ItalicUse.ItalicUseKind.Term, Report.Location));
                 var props = new RunProperties(new Underline { Val = UnderlineValues.Dotted, Color = "4BACC6" });
