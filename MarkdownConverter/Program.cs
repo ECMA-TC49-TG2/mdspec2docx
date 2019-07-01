@@ -7,13 +7,10 @@
 using MarkdownConverter.Converter;
 using MarkdownConverter.Grammar;
 using MarkdownConverter.Spec;
-using Microsoft.FSharp.Core;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace MarkdownConverter
 {
@@ -54,7 +51,7 @@ namespace MarkdownConverter
             }
 
             var imdfiles = new List<string>();
-            string ireadmefile = null, iantlrfile = null, idocxfile = null, ohtmlfile = null, odocfile = null;
+            string ireadmefile = null, iantlrfile = null, idocxfile = null, odocfile = null;
             foreach (var ifile in ifiles)
             {
                 var name = Path.GetFileName(ifile);
@@ -68,11 +65,20 @@ namespace MarkdownConverter
             foreach (var ofile in ofiles)
             {
                 var ext = Path.GetExtension(ofile).ToLower();
-                if (ext == ".html" || ext == ".htm") { if (ohtmlfile != null) argserror += "Multiple output html files\n"; ohtmlfile = ofile; }
-                if (ext == ".docx") { if (odocfile != null) argserror += "Multiple output docx files\n"; odocfile = ofile; }
+                if (ext == ".docx")
+                {
+                    if (odocfile != null)
+                    {
+                        argserror += "Multiple output docx files\n";
+                    }
+                    odocfile = ofile;
+                }
+                else
+                {
+                    argserror += $"Unknown output file extension: {ext}\n";
+                }
             }
 
-            if (ohtmlfile != null && iantlrfile == null) argserror += "Can't output .html without having .g4 input\n";
             if (odocfile == null) argserror += "No output .docx file specified\n";
             if (ireadmefile == null && ifiles.Count == 0) argserror += "No .md files supplied\n";
             if (idocxfile == null) argserror += "No template.docx supplied\n";
@@ -92,7 +98,7 @@ namespace MarkdownConverter
             if (argserror != "")
             {
                 Console.Error.WriteLine(argserror);
-                Console.Error.WriteLine("mdspec2docx *.md grammar.g4 template.docx -o spec.docx -o grammar.html -td dir");
+                Console.Error.WriteLine("mdspec2docx *.md grammar.g4 template.docx -o spec.docx -td dir");
                 Console.Error.WriteLine();
                 Console.Error.WriteLine("Turns the markdown files into a word document based on the template.");
                 Console.Error.WriteLine("If readme.md and other files are given, then readme is used solely to");
@@ -187,15 +193,6 @@ namespace MarkdownConverter
                     p.Link = md.Grammar.Productions.FirstOrDefault(mdp => mdp?.Name == p.Name)?.Link;
                     p.LinkName = md.Grammar.Productions.FirstOrDefault(mdp => mdp?.Name == p.Name)?.LinkName;
                 }
-
-                /*
-                 * TODO: Re-enable HTML if we actually need it
-                if (ohtmlfile != null)
-                {
-                    Console.WriteLine($"Writing '{Path.GetFileName(ohtmlfile)}'");
-                    File.WriteAllText(ohtmlfile, grammar.ToHtml(), Encoding.UTF8);
-                }
-                */
             }
 
             // Generate the Specification.docx file
