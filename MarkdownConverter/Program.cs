@@ -18,10 +18,9 @@ namespace MarkdownConverter
     {
         static int Main(string[] args)
         {
-            // mdspec2docx *.md csharp.g4 template.docx -o spec.docx -o grammar.html -interactive -td dir
+            // mdspec2docx *.md csharp.g4 template.docx -o spec.docx
             var ifiles = new List<string>();
             var ofiles = new List<string>();
-            string tempdir = null;
             string argserror = "";
             for (int i = 0; i < args.Length; i++)
             {
@@ -29,7 +28,6 @@ namespace MarkdownConverter
                 if (arg.StartsWith("-"))
                 {
                     if (arg == "-o" && i < args.Length - 1) { i++; ofiles.Add(args[i]); }
-                    else if (arg == "-td" && i < args.Length - 1) { i++; tempdir = args[i]; }
                     else argserror += $"Unrecognized '{arg}'\n";
                 }
                 else if (!arg.Contains("*") && !arg.Contains("?"))
@@ -82,23 +80,11 @@ namespace MarkdownConverter
             if (odocfile == null) argserror += "No output .docx file specified\n";
             if (ireadmefile == null && ifiles.Count == 0) argserror += "No .md files supplied\n";
             if (idocxfile == null) argserror += "No template.docx supplied\n";
-            if (tempdir != null)
-            {
-                try
-                {
-                    Directory.CreateDirectory(tempdir);
-                }
-                catch (Exception ex)
-                {
-                    argserror += $"Directory '{tempdir}' - {ex.Message}\n";
-                    tempdir = null;
-                }
-            }
 
             if (argserror != "")
             {
                 Console.Error.WriteLine(argserror);
-                Console.Error.WriteLine("mdspec2docx *.md grammar.g4 template.docx -o spec.docx -td dir");
+                Console.Error.WriteLine("mdspec2docx *.md grammar.g4 template.docx -o spec.docx");
                 Console.Error.WriteLine();
                 Console.Error.WriteLine("Turns the markdown files into a word document based on the template.");
                 Console.Error.WriteLine("If readme.md and other files are given, then readme is used solely to");
@@ -203,7 +189,7 @@ namespace MarkdownConverter
                 Console.WriteLine($"Writing '{Path.GetFileName(odocfile2)}'");
                 try
                 {
-                    MarkdownSpecConverter.ConvertToWord(md, idocxfile, odocfile2, tempdir);
+                    MarkdownSpecConverter.ConvertToWord(md, idocxfile, odocfile2);
                 }
                 catch (Exception ex)
                 {
