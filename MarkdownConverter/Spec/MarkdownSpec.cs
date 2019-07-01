@@ -11,99 +11,15 @@ namespace MarkdownConverter.Spec
 {
     class MarkdownSpec
     {
-        private string text;
-        private IEnumerable<string> files;
-        public EbnfGrammar Grammar { get; set; } = new EbnfGrammar();
-        public List<SectionRef> Sections { get; set; } = new List<SectionRef>();
-        public List<ProductionRef> Productions { get; set; } = new List<ProductionRef>();
-        public Reporter Report { get; set; } = new Reporter();
-        public IEnumerable<Tuple<string, MarkdownDocument>> Sources { get; set; }
+        public EbnfGrammar Grammar { get; } = new EbnfGrammar();
+        public List<SectionRef> Sections { get; } = new List<SectionRef>();
+        public List<ProductionRef> Productions { get; } = new List<ProductionRef>();
+        public Reporter Report { get; } = new Reporter();
+        public IEnumerable<Tuple<string, MarkdownDocument>> Sources { get; }
 
-        public static MarkdownSpec ReadString(string s)
+        private MarkdownSpec(IEnumerable<Tuple<string, MarkdownDocument>> sources)
         {
-            var md = new MarkdownSpec { text = s };
-            md.Init();
-            return md;
-        }
-
-        public static MarkdownSpec ReadFiles(IEnumerable<string> files, List<Tuple<int, string, string, SourceLocation>> readme_headings)
-        {
-            var md = new MarkdownSpec { files = files };
-            md.Init();
-
-            var md_headings = md.Sections.Where(s => s.Level <= 2).ToList();
-            if (readme_headings != null && md_headings.Count > 0)
-            {
-                var readme_order = (from readme in readme_headings
-                                    select new
-                                    {
-                                        orderInBody = md_headings.FindIndex(mdh => readme.Item1 == mdh.Level && readme.Item3 == mdh.Url),
-                                        level = readme.Item1,
-                                        title = readme.Item2,
-                                        url = readme.Item3,
-                                        loc = readme.Item4
-                                    }).ToList();
-
-                // The readme order should go "1,2,3,..." up to md_headings.Last()
-                int expected = 0;
-                foreach (var readme in readme_order)
-                {
-                    if (readme.orderInBody == -1)
-                    {
-                        var link = $"{new string(' ', readme.level * 2 - 2)}* [{readme.title}]({readme.url})";
-                        md.Report.Error("MD25", $"Remove: {link}", readme.loc);
-                    }
-                    else if (readme.orderInBody < expected)
-                    {
-                        continue; // error has already been reported
-                    }
-                    else if (readme.orderInBody == expected)
-                    {
-                        expected++; continue;
-                    }
-                    else if (readme.orderInBody > expected)
-                    {
-                        for (int missing = expected; missing < readme.orderInBody; missing++)
-                        {
-                            var s = md_headings[missing];
-                            var link = $"{new string(' ', s.Level * 2 - 2)}* [{s.Title}]({s.Url})";
-                            md.Report.Error("MD24", $"Insert: {link}", readme.loc);
-                        }
-                        expected = readme.orderInBody + 1;
-                    }
-                }
-            }
-
-            return md;
-        }
-
-        private void Init()
-        {
-            // (0) Read all the markdown docs.
-            // We do so in a parallel way, being careful not to block any threadpool threads on IO work;
-            // only on CPU work.
-            if (text != null)
-            {
-                Sources = new[] { Tuple.Create("", Markdown.Parse(BugWorkaroundEncode(text))) };
-            }
-            if (files != null)
-            {
-                var tasks = new List<Task<Tuple<string, MarkdownDocument>>>();
-                foreach (var fn in files)
-                {
-                    tasks.Add(Task.Run(async () =>
-                    {
-                        using (var reader = File.OpenText(fn))
-                        {
-                            var s = await reader.ReadToEndAsync();
-                            s = BugWorkaroundEncode(s);
-                            return Tuple.Create(fn, Markdown.Parse(s));
-                        }
-                    }));
-                }
-                Sources = Task.WhenAll(tasks).GetAwaiter().GetResult();
-            }
-
+            Sources = sources;
 
             // (1) Add sections into the dictionary
             int h1 = 0, h2 = 0, h3 = 0, h4 = 0;
@@ -112,7 +28,7 @@ namespace MarkdownConverter.Spec
             // (2) Turn all the antlr code blocks into a grammar
             var sbantlr = new StringBuilder();
 
-            foreach (var src in Sources)
+            foreach (var src in sources)
             {
                 Report.CurrentFile = Path.GetFullPath(src.Item1);
                 var filename = Path.GetFileName(src.Item1);
@@ -171,12 +87,81 @@ namespace MarkdownConverter.Spec
                         }
                     }
                 }
-
-
-
             }
         }
 
+        public static MarkdownSpec ReadString(string text)
+        {
+            var source = Tuple.Create("", Markdown.Parse(BugWorkaroundEncode(text)));
+            return new MarkdownSpec(new[] { source });
+        }
+
+        public static MarkdownSpec ReadFiles(IEnumerable<string> files, List<Tuple<int, string, string, SourceLocation>> readme_headings)
+        {
+            // (0) Read all the markdown docs.
+            // We do so in a parallel way, being careful not to block any threadpool threads on IO work;
+            // only on CPU work.
+            var tasks = new List<Task<Tuple<string, MarkdownDocument>>>();
+            foreach (var fn in files)
+            {
+                tasks.Add(Task.Run(async () =>
+                {
+                    using (var reader = File.OpenText(fn))
+                    {
+                        var text = await reader.ReadToEndAsync();
+                        text = BugWorkaroundEncode(text);
+                        return Tuple.Create(fn, Markdown.Parse(text));
+                    }
+                }));
+            }
+            var sources = Task.WhenAll(tasks).GetAwaiter().GetResult();
+
+            var md = new MarkdownSpec(sources);
+            var md_headings = md.Sections.Where(s => s.Level <= 2).ToList();
+            if (readme_headings != null && md_headings.Count > 0)
+            {
+                var readme_order = (from readme in readme_headings
+                                    select new
+                                    {
+                                        orderInBody = md_headings.FindIndex(mdh => readme.Item1 == mdh.Level && readme.Item3 == mdh.Url),
+                                        level = readme.Item1,
+                                        title = readme.Item2,
+                                        url = readme.Item3,
+                                        loc = readme.Item4
+                                    }).ToList();
+
+                // The readme order should go "1,2,3,..." up to md_headings.Last()
+                int expected = 0;
+                foreach (var readme in readme_order)
+                {
+                    if (readme.orderInBody == -1)
+                    {
+                        var link = $"{new string(' ', readme.level * 2 - 2)}* [{readme.title}]({readme.url})";
+                        md.Report.Error("MD25", $"Remove: {link}", readme.loc);
+                    }
+                    else if (readme.orderInBody < expected)
+                    {
+                        continue; // error has already been reported
+                    }
+                    else if (readme.orderInBody == expected)
+                    {
+                        expected++; continue;
+                    }
+                    else if (readme.orderInBody > expected)
+                    {
+                        for (int missing = expected; missing < readme.orderInBody; missing++)
+                        {
+                            var s = md_headings[missing];
+                            var link = $"{new string(' ', s.Level * 2 - 2)}* [{s.Title}]({s.Url})";
+                            md.Report.Error("MD24", $"Insert: {link}", readme.loc);
+                        }
+                        expected = readme.orderInBody + 1;
+                    }
+                }
+            }
+
+            return md;
+        }
 
         private static string BugWorkaroundEncode(string src)
         {
