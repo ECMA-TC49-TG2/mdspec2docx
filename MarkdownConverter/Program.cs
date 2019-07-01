@@ -208,21 +208,6 @@ namespace MarkdownConverter
             Console.Error.WriteLine($"{loc}: {severity} {code}: {ireport:D3}. {msg}");
         }
 
-
-        static string PickUniqueFilename(string suggestion)
-        {
-            var dir = Path.GetFileNameWithoutExtension(suggestion);
-            var ext = Path.GetExtension(suggestion);
-
-            for (int ifn = 0; true; ifn++)
-            {
-                var fn = dir + (ifn == 0 ? "" : ifn.ToString()) + ext;
-                if (!File.Exists(fn)) return fn;
-                try { File.Delete(fn); return fn; } catch (Exception) { }
-                ifn++;
-            }
-        }
-
         class ProductionDifference
         {
             public string productionName;
