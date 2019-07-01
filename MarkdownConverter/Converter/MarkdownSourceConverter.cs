@@ -267,14 +267,6 @@ namespace MarkdownConverter.Converter
             }
         }
 
-        class FlatItem
-        {
-            public int Level;
-            public bool HasBullet;
-            public bool IsBulletOrdered;
-            public MarkdownParagraph Paragraph;
-        }
-
         IEnumerable<FlatItem> FlattenList(MarkdownParagraph.ListBlock md)
         {
             var flat = FlattenList(md, 0).ToList();
@@ -498,14 +490,6 @@ namespace MarkdownConverter.Converter
                 Report.Error("MD20", $"Unrecognized markdown element {md.GetType().Name}");
                 yield return new Run(new Text($"[{md.GetType().Name}]"));
             }
-        }
-
-
-        struct Needle
-        {
-            public int needle; // or -1 if this was a non-matching span
-            public int istart;
-            public int length;
         }
 
         static List<int> needleCounts = new List<int>(200);
