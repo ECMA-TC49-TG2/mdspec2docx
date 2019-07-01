@@ -1,22 +1,21 @@
 ﻿using FSharp.Markdown;
-using System.IO;
 
 namespace MarkdownConverter.Spec
 {
     internal class SourceLocation
     {
-        public readonly string file;
-        public readonly SectionRef section;
-        public readonly MarkdownParagraph paragraph;
-        public readonly MarkdownSpan span;
+        public string File { get; }
+        public SectionRef Section { get; }
+        public MarkdownParagraph Paragraph { get; }
+        public MarkdownSpan Span { get; }
         public string _loc; // generated lazily. Of the form "file(line/col)" in a format recognizable by msbuild
 
         public SourceLocation(string file, SectionRef section, MarkdownParagraph paragraph, MarkdownSpan span)
         {
-            this.file = file;
-            this.section = section;
-            this.paragraph = paragraph;
-            this.span = span;
+            File = file;
+            Section = section;
+            Paragraph = paragraph;
+            Span = span;
         }
 
         public string loc
@@ -30,50 +29,50 @@ namespace MarkdownConverter.Spec
 
                 if (_loc != null) return _loc;
 
-                if (file == null)
+                if (File == null)
                 {
                     _loc = "mdspec2docx";
                 }
-                else if (section == null && paragraph == null)
+                else if (Section == null && Paragraph == null)
                 {
-                    _loc = file;
+                    _loc = File;
                 }
                 else
                 {
-                    var src = File.ReadAllText(file);
+                    var src = System.IO.File.ReadAllText(File);
 
                     string src2 = src; int iOffset = 0;
                     bool foundSection = false, foundParagraph = false, foundSpan = false;
-                    if (section != null)
+                    if (Section != null)
                     {
-                        var ss = Fuzzy.FindSection(src2, section);
+                        var ss = Fuzzy.FindSection(src2, Section);
                         if (ss != null) { src2 = src2.Substring(ss.start, ss.length); iOffset = ss.start; foundSection = true; }
                     }
 
-                    if (paragraph != null)
+                    if (Paragraph != null)
                     {
-                        var ss = Fuzzy.FindParagraph(src2, paragraph);
+                        var ss = Fuzzy.FindParagraph(src2, Paragraph);
                         if (ss != null) { src2 = src2.Substring(ss.start, ss.length); iOffset += ss.start; foundParagraph = true; }
                         else
                         {
                             // If we can't find the paragraph within the current section, let's try to find it anywhere
-                            ss = Fuzzy.FindParagraph(src, paragraph);
+                            ss = Fuzzy.FindParagraph(src, Paragraph);
                             if (ss != null) { src2 = src.Substring(ss.start, ss.length); iOffset = ss.start; foundSection = false; foundParagraph = true; }
                         }
                     }
 
-                    if (span != null)
+                    if (Span != null)
                     {
-                        var ss = Fuzzy.FindSpan(src2, span);
+                        var ss = Fuzzy.FindSpan(src2, Span);
                         if (ss != null) { src2 = src.Substring(ss.start, ss.length); iOffset += ss.start; foundSpan = true; }
                     }
 
                     var startPos = iOffset;
                     var endPos = startPos + src2.Length;
                     int startLine, startCol, endLine, endCol;
-                    if ((!foundSection && !foundParagraph) || !Fuzzy.FindLineCol(file, src, startPos, out startLine, out startCol, endPos, out endLine, out endCol))
+                    if ((!foundSection && !foundParagraph) || !Fuzzy.FindLineCol(File, src, startPos, out startLine, out startCol, endPos, out endLine, out endCol))
                     {
-                        _loc = file;
+                        _loc = File;
                     }
                     else
                     {
@@ -83,15 +82,15 @@ namespace MarkdownConverter.Spec
                         endCol += 1; // 1-based
                         if (foundSpan)
                         {
-                            _loc = $"{file}({startLine},{startCol},{endLine},{endCol})";
+                            _loc = $"{File}({startLine},{startCol},{endLine},{endCol})";
                         }
                         else if (startLine == endLine)
                         {
-                            _loc = $"{file}({startLine})";
+                            _loc = $"{File}({startLine})";
                         }
                         else
                         {
-                            _loc = $"{file}({startLine}-{endLine})";
+                            _loc = $"{File}({startLine}-{endLine})";
                         }
                     }
                 }
