@@ -13,25 +13,25 @@ namespace MarkdownConverter.Spec
 
         public string CurrentFile
         {
-            get => Location.file;
+            get => Location.File;
             set => Location = new SourceLocation(value, null, null, null);
         }
 
         public SectionRef CurrentSection
         {
-            get => Location.section;
+            get => Location.Section;
             set => Location = new SourceLocation(CurrentFile, value, CurrentParagraph, null);
         }
 
         public MarkdownParagraph CurrentParagraph
         {
-            get => Location.paragraph;
+            get => Location.Paragraph;
             set => Location = new SourceLocation(CurrentFile, CurrentSection, value, null);
         }
 
         public MarkdownSpan CurrentSpan
         {
-            get => Location.span;
+            get => Location.Span;
             set => Location = new SourceLocation(CurrentFile, CurrentSection, CurrentParagraph, value);
         }
 
