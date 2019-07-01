@@ -12,7 +12,7 @@ namespace MarkdownConverter.Converter
 {
     internal static class MarkdownSpecConverter
     {
-        public static void ConvertToWord(MarkdownSpec spec, string templateFile, string outputFile, string tempDir)
+        public static void ConvertToWord(MarkdownSpec spec, string templateFile, string outputFile)
         {
             using (var templateDoc = WordprocessingDocument.Open(templateFile, false))
             using (var resultDoc = WordprocessingDocument.Create(outputFile, WordprocessingDocumentType.Document))
@@ -54,7 +54,7 @@ namespace MarkdownConverter.Converter
                 var terms = new Dictionary<string, TermRef>();
                 var termkeys = new List<string>();
                 var italics = new List<ItalicUse>();
-                var colorizer = new ColorizerCache(tempDir);
+
                 foreach (var src in spec.Sources)
                 {
                     // FIXME: Ick
@@ -70,8 +70,7 @@ namespace MarkdownConverter.Converter
                         TermKeys = termkeys,
                         Italics = italics,
                         MaxBookmarkId = maxBookmarkId,
-                        Report = spec.Report,
-                        Colorizer = colorizer
+                        Report = spec.Report
                     };
                     foreach (var p in converter.Paragraphs())
                     {
@@ -79,7 +78,6 @@ namespace MarkdownConverter.Converter
                     }
                 }
 
-                colorizer.Close();
                 spec.Report.CurrentFile = null;
                 spec.Report.CurrentSection = null;
                 spec.Report.CurrentParagraph = null;

@@ -27,7 +27,6 @@ namespace MarkdownConverter.Converter
         public string Filename;
         public string CurrentSection;
         public Reporter Report;
-        public ColorizerCache Colorizer;
 
         public IEnumerable<OpenXmlCompositeElement> Paragraphs()
             => Paragraphs2Paragraphs(Mddoc.Paragraphs);
@@ -172,11 +171,31 @@ namespace MarkdownConverter.Converter
                 var runs = new List<Run>();
                 var onFirstLine = true;
                 IEnumerable<ColorizedLine> lines;
-                if (lang == "csharp" || lang == "c#" || lang == "cs") lines = Colorizer.Colorize("cs", code, Colorize.CSharp);
-                else if (lang == "vb" || lang == "vbnet" || lang == "vb.net") lines = Colorizer.Colorize("vb", code, Colorize.VB);
-                else if (lang == "" || lang == "xml") lines = Colorizer.Colorize("plain", code, Colorize.PlainText);
-                else if (lang == "antlr") lines = Colorizer.Colorize("antlr", code, Antlr.ColorizeAntlr);
-                else { Report.Error("MD09", $"unrecognized language {lang}"); lines = Colorize.PlainText(code); }
+                switch (lang)
+                {
+                    case "csharp":
+                    case "c#":
+                    case "cs":
+                        lines = Colorize.CSharp(code);
+                        break;
+                    case "vb":
+                    case "vbnet":
+                    case "vb.net":
+                        lines = Colorize.VB(code);
+                        break;
+                    case "":
+                    case "xml":
+                        lines = Colorize.PlainText(code);
+                        break;
+                    case "antlr":
+                        lines = Antlr.ColorizeAntlr(code);
+                        break;
+                    default:
+                        Report.Error("MD09", $"unrecognized language {lang}");
+                        lines = Colorize.PlainText(code);
+                        break;
+                }
+
                 foreach (var line in lines)
                 {
                     if (onFirstLine) onFirstLine = false; else runs.Add(new Run(new Break()));
