@@ -1,24 +1,37 @@
 ﻿using MarkdownConverter.Grammar;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MarkdownConverter.Spec
 {
     internal class ProductionRef
     {
-        public string Code;                  // the complete antlr code block in which it's found
-        public List<string> Names; // all production names in it
-        public string BookmarkName;          // _Grm00023
-        public static int count = 1;
+        /// <summary>
+        /// The complete antlr code block in which it's found
+        /// </summary>
+        public string Code { get; }
+        
+        /// <summary>
+        /// The names of all the productions. (TODO: Work out what this means...)
+        /// </summary>
+        public List<string> Names { get; }
+        
+        /// <summary>
+        /// The bookmark name for this production reference, e.g. _Grm00023.
+        /// </summary>
+        public string BookmarkName { get; }
+        
+        /// <summary>
+        /// Counter for bookmark generation.
+        /// </summary>
+        private static int count = 1;
 
         public ProductionRef(string code, IEnumerable<Production> productions)
         {
             Code = code;
-            Names = new List<string>(from p in productions where p.Name != null select p.Name);
-            BookmarkName = $"_Grm{count:00000}"; count++;
+            Names = productions.Select(p => p.Name).Where(name => name != null).ToList();
+            BookmarkName = $"_Grm{count:00000}";
+            count++;
         }
     }
 }
