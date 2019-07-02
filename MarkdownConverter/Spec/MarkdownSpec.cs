@@ -78,9 +78,9 @@ namespace MarkdownConverter.Spec
                         foreach (var p in g.Productions)
                         {
                             p.Link = url; p.LinkName = title;
-                            if (p.ProductionName != null && Grammar.Productions.Any(dupe => dupe.ProductionName == p.ProductionName))
+                            if (p.Name != null && Grammar.Productions.Any(dupe => dupe.Name == p.Name))
                             {
-                                reporter.Warning("MD04", $"Duplicate grammar for {p.ProductionName}");
+                                reporter.Warning("MD04", $"Duplicate grammar for {p.Name}");
                             }
                             Grammar.Productions.Add(p);
                         }

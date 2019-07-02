@@ -88,7 +88,7 @@ namespace MarkdownConverter.Converter
                 }
 
                 // Terms that are also production names?
-                var productionset = new HashSet<string>(spec.Grammar.Productions.Where(p => p.ProductionName != null).Select(p => p.ProductionName));
+                var productionset = new HashSet<string>(spec.Grammar.Productions.Where(p => p.Name != null).Select(p => p.Name));
                 productionset.IntersectWith(termset);
                 foreach (var s in productionset)
                 {
@@ -110,7 +110,7 @@ namespace MarkdownConverter.Converter
                 var italicproductions = string.Join(",", italicproductionset);
 
                 // What are the single-word production names that don't appear in italics?
-                var otherproductionset = new HashSet<string>(spec.Grammar.Productions.Where(p => p.ProductionName != null && !p.ProductionName.Contains("_") && !italicproductionset.Contains(p.ProductionName)).Select(p => p.ProductionName));
+                var otherproductionset = new HashSet<string>(spec.Grammar.Productions.Where(p => p.Name != null && !p.Name.Contains("_") && !italicproductionset.Contains(p.Name)).Select(p => p.Name));
                 var otherproductions = string.Join(",", otherproductionset);
 
                 // FIXME: We're not using these last variables...
