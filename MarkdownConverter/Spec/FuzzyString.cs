@@ -11,9 +11,9 @@ using System.Threading.Tasks;
 /// </summary>
 namespace MarkdownConverter.Spec
 {
-    class Fuzzy
+    internal static class Fuzzy
     {
-        public static Dictionary<string, List<int>> linestarts = new Dictionary<string, List<int>>();
+        private static readonly Dictionary<string, List<int>> linestarts = new Dictionary<string, List<int>>();
 
         public static bool FindLineCol(string fn, string src, int startPos, out int startLine, out int startCol, int endPos, out int endLine, out int endCol)
         {
@@ -55,7 +55,6 @@ namespace MarkdownConverter.Spec
             var spanStart = srcwords[wordStart].span.start;
             var spanEnd = (wordEnd == srcwords.Count ? srcwords.Last().span.start + srcwords.Last().span.length : srcwords[wordEnd].span.start);
             return new Span(spanStart, spanEnd - spanStart);
-
         }
 
         private static bool IsWordChar(char c)
@@ -63,7 +62,7 @@ namespace MarkdownConverter.Spec
             return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '\'';
         }
 
-        public static IEnumerable<WordSpan> FindWords(string src)
+        private static IEnumerable<WordSpan> FindWords(string src)
         {
             int i = 0;
             while (i < src.Length && !IsWordChar(src[i])) i++;
@@ -90,25 +89,25 @@ namespace MarkdownConverter.Spec
             return paragraphs.FirstOrDefault();
         }
 
-        public class WordSpan
+        private class WordSpan
         {
             public string word;
             public Span span;
         }
 
-        public class TextSpan
+        private class TextSpan
         {
             public string text;
             public Span span;
         }
 
-        public class LineSpan
+        private class LineSpan
         {
             public string line;
             public Span span;
         }
 
-        public class LineOrCodeblockSpan
+        private class LineOrCodeblockSpan
         {
             public string line;
             public string codeblock;
@@ -216,31 +215,6 @@ namespace MarkdownConverter.Spec
                 yield return new LineSpan { line = line, span = new Span(lineSpanStart, lineSpanLength) };
             }
         }
-
-        private static IEnumerable<SectionSpan> FindParagraphsInner(string src)
-        {
-            for (int i = 0; i < src.Length;)
-            {
-                // invariant: i is at the start of a line
-
-
-                if (src[i] == '#')
-                {
-                    int lineSpanStart = i;
-                    string line = "";
-
-                    var hashes = ""; while (line.StartsWith("#")) { hashes += line[0]; line = line.Substring(1); }
-                    var title = line.TrimStart(' ');
-                    yield return new SectionSpan { span = new Span(lineSpanStart, 0), hashes = hashes, title = title };
-                }
-                else
-                {
-                    while (i < src.Length && src[i] != '\r' && src[i] != '\n') i++;
-                    while (i < src.Length && (src[i] == '\r' || src[i] == '\n')) i++;
-                }
-            }
-        }
-
 
         private static IEnumerable<string> Spans2Words(IEnumerable<MarkdownSpan> spans)
         {
@@ -412,7 +386,7 @@ namespace MarkdownConverter.Spec
             return sections.FirstOrDefault();
         }
 
-        public class SectionSpan
+        private class SectionSpan
         {
             public string hashes, title;
             public Span span;
@@ -449,9 +423,9 @@ namespace MarkdownConverter.Spec
             }
         }
 
-        public static int LevenshteinCharDistance(string x, string y) => LevenshteinDistance(x, y);
+        private static int LevenshteinCharDistance(string x, string y) => LevenshteinDistance(x, y);
 
-        public static int LevenshteinDistance<T>(IEnumerable<T> x, IEnumerable<T> y) where T : IEquatable<T>
+        private static int LevenshteinDistance<T>(IEnumerable<T> x, IEnumerable<T> y) where T : IEquatable<T>
         {
             if (x == null) throw new ArgumentNullException(nameof(x));
             if (y == null) throw new ArgumentNullException(nameof(y));
@@ -488,7 +462,7 @@ namespace MarkdownConverter.Spec
             return rows[curRow][yy.Count];
         }
 
-        public static Span LevenshteinSearch<T>(IEnumerable<T> needle, IEnumerable<T> haystack) where T : IEquatable<T>
+        private static Span LevenshteinSearch<T>(IEnumerable<T> needle, IEnumerable<T> haystack) where T : IEquatable<T>
         {
             var s = LevenshteinSearchInner(needle, haystack);
             if (s == null) return null;
