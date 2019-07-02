@@ -1,13 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace MarkdownConverter.Spec
+﻿namespace MarkdownConverter.Spec
 {
     internal class Span
     {
-        public int start, length;
-        public Span(int start, int length) { this.start = start; this.length = length; }
-        public int end => start + length;
+        public int Start { get; }
+        public int Length { get; }
+        public int End => Start + Length;
+
+        public Span(int start, int length)
+        {
+            Start = start;
+            Length = length;
+        }
     }
 }
