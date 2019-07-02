@@ -8,7 +8,7 @@ namespace MarkdownConverter.Spec
         public SectionRef Section { get; }
         public MarkdownParagraph Paragraph { get; }
         public MarkdownSpan Span { get; }
-        public string _loc; // generated lazily. Of the form "file(line/col)" in a format recognizable by msbuild
+        public string _loc; // generated lazily.
 
         public SourceLocation(string file, SectionRef section, MarkdownParagraph paragraph, MarkdownSpan span)
         {
@@ -18,7 +18,10 @@ namespace MarkdownConverter.Spec
             Span = span;
         }
 
-        public string loc
+        /// <summary>
+        /// Description of the location, of the form "file(line/col)" in a format recognizable by msbuild.
+        /// </summary>
+        public string Description
         {
             get
             {
