@@ -11,11 +11,12 @@ namespace MarkdownConverter.Spec
     {
         public SourceLocation Location { get; set; } = new SourceLocation(null, null, null, null);
 
-        public string CurrentFile
+        public Reporter(string filename)
         {
-            get => Location.File;
-            set => Location = new SourceLocation(value, null, null, null);
+            Location = new SourceLocation(filename, null, null, null);
         }
+
+        public string CurrentFile => Location.File;
 
         public SectionRef CurrentSection
         {
