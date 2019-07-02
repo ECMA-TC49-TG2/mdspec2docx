@@ -2,7 +2,8 @@
 
 namespace MarkdownConverter.Spec
 {
-    // TODO: Potentially move this to the root, and refactor somewhat.
+    // Note: while this and SourceLocation sound like they should be somewhat neutral classes,
+    // the presence of CurrentSection etc tie them closely to the Spec namespace.
 
     /// <summary>
     /// Diagnostic reporter
