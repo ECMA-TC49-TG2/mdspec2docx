@@ -37,9 +37,9 @@ namespace MarkdownConverter.Spec
             set => Location = new SourceLocation(CurrentFile, CurrentSection, CurrentParagraph, value);
         }
 
-        public void Error(string code, string msg, SourceLocation loc = null) => Program.Report(code, "ERROR", msg, loc?.loc ?? Location.loc);
+        public void Error(string code, string msg, SourceLocation loc = null) => Program.Report(code, "ERROR", msg, loc?.Description ?? Location.Description);
 
-        public void Warning(string code, string msg, SourceLocation loc = null) => Program.Report(code, "WARNING", msg, loc?.loc ?? Location.loc);
+        public void Warning(string code, string msg, SourceLocation loc = null) => Program.Report(code, "WARNING", msg, loc?.Description ?? Location.Description);
 
         public void Log(string msg) { }
 
