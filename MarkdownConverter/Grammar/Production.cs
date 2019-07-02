@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace MarkdownConverter.Grammar
+﻿namespace MarkdownConverter.Grammar
 {
     internal class Production
     {
@@ -15,9 +11,6 @@ namespace MarkdownConverter.Grammar
         /// Optional. Contains no whitespace and is not delimited by '
         /// </summary>
         public string Name { get; set; }
-
-        // TODO: Remove.
-        public string ProductionName => Name;
 
         /// <summary>
         /// Optional. Does not contain *) or newline

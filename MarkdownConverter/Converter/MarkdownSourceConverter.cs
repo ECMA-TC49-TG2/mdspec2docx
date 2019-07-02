@@ -420,7 +420,7 @@ namespace MarkdownConverter.Converter
                 if (!nestedSpan && md.IsEmphasis && spans.Count() == 1 && spans.First().IsLiteral)
                 {
                     literal = (spans.First() as MarkdownSpan.Literal).text;
-                    prodref = productions.FirstOrDefault(pr => pr.ProductionNames.Contains(literal));
+                    prodref = productions.FirstOrDefault(pr => pr.Names.Contains(literal));
                     italics.Add(new ItalicUse(literal, prodref != null ? ItalicUse.ItalicUseKind.Production : ItalicUse.ItalicUseKind.Italic, reporter.Location));
                 }
 
