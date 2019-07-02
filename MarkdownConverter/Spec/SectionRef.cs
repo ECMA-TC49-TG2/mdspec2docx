@@ -6,14 +6,47 @@ namespace MarkdownConverter.Spec
 {
     internal class SectionRef
     {
-        public string Number;        // "10.1.2"
-        public string Title;         // "Goto Statement"
-        public int Level;            // 1-based level, e.g. 3
-        public string Url;           // statements.md#goto-statement
-        public string BookmarkName;  // _Toc00023
+        // TODO: It would be nice if this could be read-only, but it's computed based on Level.
+        // (We could create a new SectionRef with the new number, admittedly, but it's probably not worth it.)
+        /// <summary>
+        /// Section number, e.g. 10.1.2
+        /// </summary>
+        public string Number { get; set; }
+
+        /// <summary>
+        /// Section title, e.g. "Goto Statement"
+        /// </summary>
+        public string Title { get; }
+
+        /// <summary>
+        /// 1-based level, e.g. 3
+        /// </summary>
+        public int Level { get; }
+
+        /// <summary>
+        /// URL for the Markdown source, e.g. statements.md#goto-statement
+        /// </summary>
+        public string Url { get; }
+
+        /// <summary>
+        /// Name of generated bookmark, e.g. _Toc00023.
+        /// </summary>
+        public string BookmarkName { get; }
+
+        /// <summary>
+        /// Title in Markdown, e.g. "Goto Statement" or "`<code>`"
+        /// </summary>
         public string MarkdownTitle; // "Goto Statement" or "`<code>`"
-        public SourceLocation Loc;
-        public static int count = 1;
+
+        /// <summary>
+        /// Location in source Markdown.
+        /// </summary>
+        public SourceLocation Loc { get; }
+
+        /// <summary>
+        /// Counter used to generate bookmarks.
+        /// </summary>
+        private static int count = 1;
 
         public SectionRef(MarkdownParagraph.Heading mdh, string filename)
         {

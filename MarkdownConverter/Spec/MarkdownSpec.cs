@@ -46,7 +46,6 @@ namespace MarkdownConverter.Spec
                             if (sr.Level == 2) { h2 += 1; h3 = 0; h4 = 0; sr.Number = $"{h1}.{h2}"; }
                             if (sr.Level == 3) { h3 += 1; h4 = 0; sr.Number = $"{h1}.{h2}.{h3}"; }
                             if (sr.Level == 4) { h4 += 1; sr.Number = $"{h1}.{h2}.{h3}.{h4}"; }
-                            //
                             if (sr.Level > 4)
                             {
                                 reporter.Error("MD01", "Only support heading depths up to ####");
