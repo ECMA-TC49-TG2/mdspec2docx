@@ -46,7 +46,7 @@ namespace MarkdownConverter.Converter
             this.italics = italics;
             this.maxBookmarkId = maxBookmarkId;
             this.filename = filename;
-            reporter = new Reporter { CurrentFile = filename };
+            reporter = new Reporter(filename);
         }
 
         public IEnumerable<OpenXmlCompositeElement> Paragraphs() =>

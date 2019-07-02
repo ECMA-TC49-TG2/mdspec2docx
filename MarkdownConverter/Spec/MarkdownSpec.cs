@@ -14,7 +14,6 @@ namespace MarkdownConverter.Spec
         public EbnfGrammar Grammar { get; } = new EbnfGrammar();
         public List<SectionRef> Sections { get; } = new List<SectionRef>();
         public List<ProductionRef> Productions { get; } = new List<ProductionRef>();
-        public Reporter Report { get; } = new Reporter();
         public IEnumerable<Tuple<string, MarkdownDocument>> Sources { get; }
 
         private MarkdownSpec(IEnumerable<Tuple<string, MarkdownDocument>> sources)
@@ -30,14 +29,14 @@ namespace MarkdownConverter.Spec
 
             foreach (var src in sources)
             {
-                Report.CurrentFile = Path.GetFullPath(src.Item1);
+                var reporter = new Reporter(src.Item1);
                 var filename = Path.GetFileName(src.Item1);
                 var md = src.Item2;
 
                 foreach (var mdp in md.Paragraphs)
                 {
-                    Report.CurrentParagraph = mdp;
-                    Report.CurrentSection = null;
+                    reporter.CurrentParagraph = mdp;
+                    reporter.CurrentSection = null;
                     if (mdp.IsHeading)
                     {
                         try
@@ -50,23 +49,23 @@ namespace MarkdownConverter.Spec
                             //
                             if (sr.Level > 4)
                             {
-                                Report.Error("MD01", "Only support heading depths up to ####");
+                                reporter.Error("MD01", "Only support heading depths up to ####");
                             }
                             else if (Sections.Any(s => s.Url == sr.Url))
                             {
-                                Report.Error("MD02", $"Duplicate section title {sr.Url}");
+                                reporter.Error("MD02", $"Duplicate section title {sr.Url}");
                             }
                             else
                             {
                                 Sections.Add(sr);
                                 url = sr.Url;
                                 title = sr.Title;
-                                Report.CurrentSection = sr;
+                                reporter.CurrentSection = sr;
                             }
                         }
                         catch (Exception ex)
                         {
-                            Report.Error("MD03", ex.Message); // constructor of SectionRef might throw
+                            reporter.Error("MD03", ex.Message); // constructor of SectionRef might throw
                         }
                     }
                     else if (mdp.IsCodeBlock)
@@ -81,7 +80,7 @@ namespace MarkdownConverter.Spec
                             p.Link = url; p.LinkName = title;
                             if (p.ProductionName != null && Grammar.Productions.Any(dupe => dupe.ProductionName == p.ProductionName))
                             {
-                                Report.Warning("MD04", $"Duplicate grammar for {p.ProductionName}");
+                                reporter.Warning("MD04", $"Duplicate grammar for {p.ProductionName}");
                             }
                             Grammar.Productions.Add(p);
                         }
@@ -134,10 +133,11 @@ namespace MarkdownConverter.Spec
                 int expected = 0;
                 foreach (var readme in readme_order)
                 {
+                    var reporter = new Reporter(readme.loc.File);
                     if (readme.orderInBody == -1)
                     {
                         var link = $"{new string(' ', readme.level * 2 - 2)}* [{readme.title}]({readme.url})";
-                        md.Report.Error("MD25", $"Remove: {link}", readme.loc);
+                        reporter.Error("MD25", $"Remove: {link}", readme.loc);
                     }
                     else if (readme.orderInBody < expected)
                     {
@@ -153,7 +153,7 @@ namespace MarkdownConverter.Spec
                         {
                             var s = md_headings[missing];
                             var link = $"{new string(' ', s.Level * 2 - 2)}* [{s.Title}]({s.Url})";
-                            md.Report.Error("MD24", $"Insert: {link}", readme.loc);
+                            reporter.Error("MD24", $"Insert: {link}", readme.loc);
                         }
                         expected = readme.orderInBody + 1;
                     }

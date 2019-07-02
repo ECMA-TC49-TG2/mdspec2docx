@@ -72,7 +72,7 @@ namespace MarkdownConverter.Converter
                     }
                 }
 
-                var reporter = new Reporter();
+                var reporter = new Reporter(filename: null);
 
                 // I wonder if there were any oddities? ...
                 // Terms that were referenced before their definition?
