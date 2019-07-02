@@ -22,7 +22,7 @@ namespace MarkdownConverter.Spec
             List<int> starts;
             if (!linestarts.TryGetValue(fn, out starts))
             {
-                starts = FindRawLines(src).Select(raw => raw.span.start).ToList();
+                starts = FindRawLines(src).Select(raw => raw.span.Start).ToList();
                 linestarts[fn] = starts;
             }
 
@@ -50,10 +50,10 @@ namespace MarkdownConverter.Spec
             var srcwordsProjection = srcwords.Select(w => w.word);
             var s = LevenshteinSearch(mdwords, srcwordsProjection);
             if (s == null) return null;
-            var wordStart = s.start;
-            var wordEnd = s.start + s.length;
-            var spanStart = srcwords[wordStart].span.start;
-            var spanEnd = (wordEnd == srcwords.Count ? srcwords.Last().span.start + srcwords.Last().span.length : srcwords[wordEnd].span.start);
+            var wordStart = s.Start;
+            var wordEnd = s.Start + s.Length;
+            var spanStart = srcwords[wordStart].span.Start;
+            var spanEnd = (wordEnd == srcwords.Count ? srcwords.Last().span.Start + srcwords.Last().span.Length : srcwords[wordEnd].span.Start);
             return new Span(spanStart, spanEnd - spanStart);
         }
 
@@ -129,10 +129,10 @@ namespace MarkdownConverter.Spec
                 else
                 {
                     var p = "";
-                    var spanStart = lines[i].span.start;
+                    var spanStart = lines[i].span.Start;
                     var lastLine = lines[i];
                     while (i < lines.Count && lines[i].line != null && lines[i].line != "") { lastLine = lines[i]; p += lines[i].line + "\r\n"; i++; }
-                    yield return new TextSpan { text = p, span = new Span(spanStart, lastLine.span.end - spanStart) };
+                    yield return new TextSpan { text = p, span = new Span(spanStart, lastLine.span.End - spanStart) };
                 }
                 while (i < lines.Count && lines[i].line != null && lines[i].line == "") i++;
             }
@@ -149,7 +149,7 @@ namespace MarkdownConverter.Spec
                 {
                     MdIsFenceStart(line.line, out lang, out fence, out indent, out terminator);
                     if (lang == null) yield return new LineOrCodeblockSpan { line = line.line, span = line.span };
-                    else { fb = new StringBuilder(); fb.Append(line); cb = new StringBuilder(); cbSpanStart = line.span.start; }
+                    else { fb = new StringBuilder(); fb.Append(line); cb = new StringBuilder(); cbSpanStart = line.span.Start; }
                 }
                 else // codeblock
                 {
@@ -157,7 +157,7 @@ namespace MarkdownConverter.Spec
                     var line2 = MdRemoveFenceIndent(line.line.TrimEnd("\r\n".ToCharArray()), indent);
                     if (!MdIsFenceEnd(line2, fence)) { cb.AppendLine(line2); continue; }
                     var code = cb.ToString();
-                    yield return new LineOrCodeblockSpan { codeblock = code, span = new Span(cbSpanStart, line.span.start + line.span.length - cbSpanStart) };
+                    yield return new LineOrCodeblockSpan { codeblock = code, span = new Span(cbSpanStart, line.span.Start + line.span.Length - cbSpanStart) };
                     cb = null;
                 }
             }
@@ -395,8 +395,12 @@ namespace MarkdownConverter.Spec
         private static List<SectionSpan> FindSections(string src)
         {
             var sections = FindSectionsInner(src).ToList();
-            for (int i = 0; i < sections.Count - 1; i++) sections[i].span.length = sections[i + 1].span.start - sections[i].span.start;
-            if (sections.Count > 0) sections[sections.Count - 1].span.length = src.Length - sections[sections.Count - 1].span.start;
+            for (int i = 0; i < sections.Count; i++)
+            {
+                var start = sections[i].span.Start;
+                var nextStart = i == sections.Count - 1 ? src.Length : sections[i + 1].span.Start;
+                sections[i].span = new Span(start, nextStart - start);
+            }
             return sections;
         }
 
@@ -466,9 +470,9 @@ namespace MarkdownConverter.Spec
         {
             var s = LevenshteinSearchInner(needle, haystack);
             if (s == null) return null;
-            var spanEnd = s.length;
+            var spanEnd = s.Length;
             s = LevenshteinSearchInner(needle.Reverse(), haystack.Reverse());
-            var spanStart = haystack.Count() - s.length;
+            var spanStart = haystack.Count() - s.Length;
             if (spanEnd < spanStart) return null;
             return new Span(spanStart, spanEnd - spanStart);
         }

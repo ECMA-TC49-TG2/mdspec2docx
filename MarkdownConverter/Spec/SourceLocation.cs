@@ -49,25 +49,25 @@ namespace MarkdownConverter.Spec
                     if (Section != null)
                     {
                         var ss = Fuzzy.FindSection(src2, Section);
-                        if (ss != null) { src2 = src2.Substring(ss.start, ss.length); iOffset = ss.start; foundSection = true; }
+                        if (ss != null) { src2 = src2.Substring(ss.Start, ss.Length); iOffset = ss.Start; foundSection = true; }
                     }
 
                     if (Paragraph != null)
                     {
                         var ss = Fuzzy.FindParagraph(src2, Paragraph);
-                        if (ss != null) { src2 = src2.Substring(ss.start, ss.length); iOffset += ss.start; foundParagraph = true; }
+                        if (ss != null) { src2 = src2.Substring(ss.Start, ss.Length); iOffset += ss.Start; foundParagraph = true; }
                         else
                         {
                             // If we can't find the paragraph within the current section, let's try to find it anywhere
                             ss = Fuzzy.FindParagraph(src, Paragraph);
-                            if (ss != null) { src2 = src.Substring(ss.start, ss.length); iOffset = ss.start; foundSection = false; foundParagraph = true; }
+                            if (ss != null) { src2 = src.Substring(ss.Start, ss.Length); iOffset = ss.Start; foundSection = false; foundParagraph = true; }
                         }
                     }
 
                     if (Span != null)
                     {
                         var ss = Fuzzy.FindSpan(src2, Span);
-                        if (ss != null) { src2 = src.Substring(ss.start, ss.length); iOffset += ss.start; foundSpan = true; }
+                        if (ss != null) { src2 = src.Substring(ss.Start, ss.Length); iOffset += ss.Start; foundSpan = true; }
                     }
 
                     var startPos = iOffset;
