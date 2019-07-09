@@ -1,8 +1,8 @@
 ﻿namespace MarkdownConverter.Converter
 {
-    internal struct Needle
+    internal readonly struct Needle
     {
-        public int NeedleId; // or -1 if this was a non-matching span
+        public int NeedleId { get; }
         public int Start { get; }
         public int Length { get; }
 
