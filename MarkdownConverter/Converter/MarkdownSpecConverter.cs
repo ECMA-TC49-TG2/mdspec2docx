@@ -50,10 +50,8 @@ namespace MarkdownConverter.Converter
                     if (tocSec != null) body.InsertBefore(tocSec, afterToc);
                 }
 
-                var maxBookmarkId = new StrongBox<int>(1 + body.Descendants<BookmarkStart>().Max(bookmark => int.Parse(bookmark.Id)));
-                var terms = new Dictionary<string, TermRef>();
-                var termkeys = new List<string>();
-                var italics = new List<ItalicUse>();
+                var context = new ConversionContext();
+                context.MaxBookmarkId.Value = 1 + body.Descendants<BookmarkStart>().Max(bookmark => int.Parse(bookmark.Id));
 
                 foreach (var src in spec.Sources)
                 {
@@ -61,10 +59,7 @@ namespace MarkdownConverter.Converter
                         markdownDocument: src.Item2,
                         wordDocument: resultDoc,
                         spec: spec,
-                        terms: terms,
-                        termKeys: termkeys,
-                        italics: italics,
-                        maxBookmarkId: maxBookmarkId,
+                        context: context,
                         filename: Path.GetFileName(src.Item1));
                     foreach (var p in converter.Paragraphs())
                     {
@@ -76,13 +71,13 @@ namespace MarkdownConverter.Converter
 
                 // I wonder if there were any oddities? ...
                 // Terms that were referenced before their definition?
-                var termset = new HashSet<string>(terms.Keys);
-                var italicset = new HashSet<string>(italics.Where(i => i.Kind == ItalicUse.ItalicUseKind.Italic).Select(i => i.Literal));
+                var termset = new HashSet<string>(context.Terms.Keys);
+                var italicset = new HashSet<string>(context.Italics.Where(i => i.Kind == ItalicUse.ItalicUseKind.Italic).Select(i => i.Literal));
                 italicset.IntersectWith(termset);
                 foreach (var s in italicset)
                 {
-                    var use = italics.First(i => i.Literal == s);
-                    var def = terms[s];
+                    var use = context.Italics.First(i => i.Literal == s);
+                    var def = context.Terms[s];
                     reporter.Warning("MD05", $"Term '{s}' used before definition", use.Loc);
                     reporter.Warning("MD05b", $"... definition location of '{s}' for previous warning", def.Loc);
                 }
@@ -92,21 +87,21 @@ namespace MarkdownConverter.Converter
                 productionset.IntersectWith(termset);
                 foreach (var s in productionset)
                 {
-                    var def = terms[s];
+                    var def = context.Terms[s];
                     reporter.Warning("MD06", $"Terms '{s}' is also a grammar production name", def.Loc);
                 }
 
                 // Terms that were defined but never used?
-                var termrefset = new HashSet<string>(italics.Where(i => i.Kind == ItalicUse.ItalicUseKind.Term).Select(i => i.Literal));
+                var termrefset = new HashSet<string>(context.Italics.Where(i => i.Kind == ItalicUse.ItalicUseKind.Term).Select(i => i.Literal));
                 termset.RemoveWhere(t => termrefset.Contains(t));
                 foreach (var s in termset)
                 {
-                    var def = terms[s];
+                    var def = context.Terms[s];
                     reporter.Warning("MD07", $"Term '{s}' is defined but never used", def.Loc);
                 }
 
                 // Which single-word production-names appear in italics?
-                var italicproductionset = new HashSet<string>(italics.Where(i => !i.Literal.Contains("_") && i.Kind == ItalicUse.ItalicUseKind.Production).Select(i => i.Literal));
+                var italicproductionset = new HashSet<string>(context.Italics.Where(i => !i.Literal.Contains("_") && i.Kind == ItalicUse.ItalicUseKind.Production).Select(i => i.Literal));
                 var italicproductions = string.Join(",", italicproductionset);
 
                 // What are the single-word production names that don't appear in italics?
