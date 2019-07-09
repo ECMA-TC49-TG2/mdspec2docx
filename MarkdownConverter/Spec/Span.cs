@@ -6,10 +6,7 @@
         public int Length { get; }
         public int End => Start + Length;
 
-        public Span(int start, int length)
-        {
-            Start = start;
-            Length = length;
-        }
+        public Span(int start, int length) =>
+            (Start, Length) = (start, length);
     }
 }
