@@ -20,10 +20,7 @@ namespace MarkdownConverter.Converter
         private readonly WordprocessingDocument wordDocument;
         private readonly Dictionary<string, SectionRef> sections;
         private readonly List<ProductionRef> productions;
-        private readonly Dictionary<string, TermRef> terms;
-        private readonly List<string> termKeys;
-        private readonly List<ItalicUse> italics;
-        private readonly StrongBox<int> maxBookmarkId;
+        private readonly ConversionContext context;
         private readonly string filename;
         private readonly Reporter reporter;
 
@@ -31,20 +28,14 @@ namespace MarkdownConverter.Converter
             MarkdownDocument markdownDocument,
             WordprocessingDocument wordDocument,
             MarkdownSpec spec,
-            Dictionary<string, TermRef> terms,
-            List<string> termKeys,
-            List<ItalicUse> italics,
-            StrongBox<int> maxBookmarkId,
+            ConversionContext context,
             string filename)
         {
             this.markdownDocument = markdownDocument;
             this.wordDocument = wordDocument;
             sections = spec.Sections.ToDictionary(sr => sr.Url);
             productions = spec.Productions;
-            this.terms = terms;
-            this.termKeys = termKeys;
-            this.italics = italics;
-            this.maxBookmarkId = maxBookmarkId;
+            this.context = context;
             this.filename = filename;
             reporter = new Reporter(filename);
         }
@@ -67,10 +58,10 @@ namespace MarkdownConverter.Converter
                 reporter.CurrentSection = sr;
                 var props = new ParagraphProperties(new ParagraphStyleId() { Val = $"Heading{level}" });
                 var p = new Paragraph { ParagraphProperties = props };
-                maxBookmarkId.Value += 1;
-                p.AppendChild(new BookmarkStart { Name = sr.BookmarkName, Id = maxBookmarkId.Value.ToString() });
+                context.MaxBookmarkId.Value += 1;
+                p.AppendChild(new BookmarkStart { Name = sr.BookmarkName, Id = context.MaxBookmarkId.Value.ToString() });
                 p.Append(Spans2Elements(spans));
-                p.AppendChild(new BookmarkEnd { Id = maxBookmarkId.Value.ToString() });
+                p.AppendChild(new BookmarkEnd { Id = context.MaxBookmarkId.Value.ToString() });
                 yield return p;
                 
                 var i = sr.Url.IndexOf("#");
@@ -232,10 +223,10 @@ namespace MarkdownConverter.Converter
                 {
                     var p = new Paragraph() { ParagraphProperties = new ParagraphProperties(new ParagraphStyleId { Val = "Grammar" }) };
                     var prodref = productions.Single(prod => prod.Code == code);
-                    maxBookmarkId.Value += 1;
-                    p.AppendChild(new BookmarkStart { Name = prodref.BookmarkName, Id = maxBookmarkId.Value.ToString() });
+                    context.MaxBookmarkId.Value += 1;
+                    p.AppendChild(new BookmarkStart { Name = prodref.BookmarkName, Id = context.MaxBookmarkId.Value.ToString() });
                     p.Append(runs);
-                    p.AppendChild(new BookmarkEnd { Id = maxBookmarkId.Value.ToString() });
+                    p.AppendChild(new BookmarkEnd { Id = context.MaxBookmarkId.Value.ToString() });
                     yield return p;
                 }
                 else
@@ -403,13 +394,17 @@ namespace MarkdownConverter.Converter
                     {
                         literal = (spans2.First() as MarkdownSpan.Literal).text;
                         termdef = new TermRef(literal, reporter.Location);
-                        if (terms.ContainsKey(literal))
+                        if (context.Terms.ContainsKey(literal))
                         {
-                            var def = terms[literal];
+                            var def = context.Terms[literal];
                             reporter.Warning("MD16", $"Term '{literal}' defined a second time");
                             reporter.Warning("MD16b", $"Here was the previous definition of term '{literal}'", def.Loc);
                         }
-                        else { terms.Add(literal, termdef); termKeys.Clear(); }
+                        else
+                        {
+                            context.Terms.Add(literal, termdef);
+                            context.TermKeys.Clear();
+                        }
                     }
                 }
 
@@ -421,7 +416,7 @@ namespace MarkdownConverter.Converter
                 {
                     literal = (spans.First() as MarkdownSpan.Literal).text;
                     prodref = productions.FirstOrDefault(pr => pr.Names.Contains(literal));
-                    italics.Add(new ItalicUse(literal, prodref != null ? ItalicUse.ItalicUseKind.Production : ItalicUse.ItalicUseKind.Italic, reporter.Location));
+                    context.Italics.Add(new ItalicUse(literal, prodref != null ? ItalicUse.ItalicUseKind.Production : ItalicUse.ItalicUseKind.Italic, reporter.Location));
                 }
 
                 if (prodref != null)
@@ -433,11 +428,11 @@ namespace MarkdownConverter.Converter
                 }
                 else if (termdef != null)
                 {
-                    maxBookmarkId.Value += 1;
-                    yield return new BookmarkStart { Name = termdef.BookmarkName, Id = maxBookmarkId.Value.ToString() };
+                    context.MaxBookmarkId.Value += 1;
+                    yield return new BookmarkStart { Name = termdef.BookmarkName, Id = context.MaxBookmarkId.Value.ToString() };
                     var props = new RunProperties(new Italic(), new Bold());
                     yield return new Run(new Text(literal) { Space = SpaceProcessingModeValues.Preserve }) { RunProperties = props };
-                    yield return new BookmarkEnd { Id = maxBookmarkId.Value.ToString() };
+                    yield return new BookmarkEnd { Id = context.MaxBookmarkId.Value.ToString() };
                 }
                 else
                 {
@@ -529,70 +524,21 @@ namespace MarkdownConverter.Converter
             }
         }
 
-        static List<int> needleCounts = new List<int>(200);
-
-        static IEnumerable<Needle> FindNeedles(IEnumerable<string> needles0, string haystack)
-        {
-            IList<string> needles = (needles0 as IList<string>) ?? new List<string>(needles0);
-            for (int i = 0; i < Math.Min(needleCounts.Count, needles.Count); i++)
-            {
-                needleCounts[i] = 0;
-            }
-
-            while (needleCounts.Count < needles.Count)
-            {
-                needleCounts.Add(0);
-            }
-            
-            var xcount = 0;
-            for (int ic = 0; ic < haystack.Length; ic++)
-            {
-                var c = haystack[ic];
-                xcount++;
-                for (int i = 0; i < needles.Count; i++)
-                {
-                    if (needles[i][needleCounts[i]] == c)
-                    {
-                        needleCounts[i]++;
-                        if (needleCounts[i] == needles[i].Length)
-                        {
-                            if (xcount > needleCounts[i])
-                            {
-                                yield return new Needle(-1, ic + 1 - xcount, xcount - needleCounts[i]);
-                            }
-                            yield return new Needle(i, ic + 1 - needleCounts[i], needleCounts[i]);
-                            xcount = 0;
-                            for (int j = 0; j < needles.Count; j++)
-                            {
-                                needleCounts[j] = 0;
-                            }
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        needleCounts[i] = 0;
-                    }
-                }
-            }
-            if (xcount > 0)
-            {
-                yield return new Needle(-1, haystack.Length - xcount, xcount);
-            }
-        }
-
 
         IEnumerable<OpenXmlElement> Literal2Elements(string literal, bool isNested)
         {
-            if (isNested || terms.Count == 0)
+            if (isNested || context.Terms.Count == 0)
             {
                 yield return new Run(new Text(literal) { Space = SpaceProcessingModeValues.Preserve });
                 yield break;
             }
 
-            if (termKeys.Count == 0) termKeys.AddRange(terms.Keys);
+            if (context.TermKeys.Count == 0)
+            {
+                context.TermKeys.AddRange(context.Terms.Keys);
+            }
 
-            foreach (var needle in FindNeedles(termKeys, literal))
+            foreach (var needle in context.FindNeedles(context.TermKeys, literal))
             {
                 var s = literal.Substring(needle.Start, needle.Length);
                 if (needle.NeedleId == -1)
@@ -600,14 +546,13 @@ namespace MarkdownConverter.Converter
                     yield return new Run(new Text(s) { Space = SpaceProcessingModeValues.Preserve });
                     continue;
                 }
-                var termref = terms[s];
-                italics.Add(new ItalicUse(s, ItalicUse.ItalicUseKind.Term, reporter.Location));
+                var termref = context.Terms[s];
+                context.Italics.Add(new ItalicUse(s, ItalicUse.ItalicUseKind.Term, reporter.Location));
                 var props = new RunProperties(new Underline { Val = UnderlineValues.Dotted, Color = "4BACC6" });
                 var run = new Run(new Text(s) { Space = SpaceProcessingModeValues.Preserve }) { RunProperties = props };
                 var link = new Hyperlink(run) { Anchor = termref.BookmarkName };
                 yield return link;
             }
-
         }
 
         private static string BugWorkaroundDecode(string s)
