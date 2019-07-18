@@ -1,4 +1,5 @@
-﻿using FSharp.Markdown;
+﻿using FSharp.Formatting.Common;
+using FSharp.Markdown;
 
 namespace MarkdownConverter.Spec
 {
@@ -30,7 +31,10 @@ namespace MarkdownConverter.Spec
                 // But it's not yet: https://github.com/tpetricek/FSharp.Formatting/issues/410
                 // So for the time being, we have to hack around to try to find it.
 
-                if (_loc != null) return _loc;
+                if (_loc != null)
+                {
+                    return _loc;
+                }
 
                 if (File == null)
                 {
@@ -42,6 +46,7 @@ namespace MarkdownConverter.Spec
                 }
                 else
                 {
+
                     var src = System.IO.File.ReadAllText(File);
 
                     string src2 = src; int iOffset = 0;

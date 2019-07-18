@@ -14,7 +14,7 @@ namespace MarkdownConverter.Converter
         internal List<string> TermKeys { get; } = new List<string>();
         internal List<ItalicUse> Italics { get; } = new List<ItalicUse>();
         internal StrongBox<int> MaxBookmarkId { get; } = new StrongBox<int>();
-        
+
         private readonly List<int> needleCounts = new List<int>(200);
 
         // TODO: Work out what this actually does. It's very confusing...

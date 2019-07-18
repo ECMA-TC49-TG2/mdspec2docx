@@ -28,7 +28,10 @@ namespace MarkdownConverter
                 if (arg.StartsWith("-"))
                 {
                     if (arg == "-o" && i < args.Length - 1) { i++; ofiles.Add(args[i]); }
-                    else argserror += $"Unrecognized '{arg}'\n";
+                    else
+                    {
+                        argserror += $"Unrecognized '{arg}'\n";
+                    }
                 }
                 else if (!arg.Contains("*") && !arg.Contains("?"))
                 {
@@ -39,8 +42,16 @@ namespace MarkdownConverter
                 {
                     // Windows command-shell doesn't do globbing, so we have to do it ourselves
                     string dir = Path.GetDirectoryName(arg), filename = Path.GetFileName(arg);
-                    if (dir.Contains("*") || dir.Contains("?")) { Console.Error.WriteLine("Can't match wildcard directory names"); return 1; }
-                    if (dir == "") dir = Directory.GetCurrentDirectory();
+                    if (dir.Contains("*") || dir.Contains("?"))
+                    {
+                        Console.Error.WriteLine("Can't match wildcard directory names");
+                        return 1;
+                    }
+                    if (dir == "")
+                    {
+                        dir = Directory.GetCurrentDirectory();
+                    }
+
                     if (!Directory.Exists(dir)) { Console.Error.WriteLine($"Not found - \"{dir}\""); return 1; }
                     var fns2 = Directory.GetFiles(dir, filename);
                     if (fns2.Length == 0) { Console.Error.WriteLine($"Not found - \"{arg}\""); return 1; }
@@ -54,10 +65,17 @@ namespace MarkdownConverter
             {
                 var name = Path.GetFileName(ifile);
                 var ext = Path.GetExtension(ifile).ToLower();
-                if (ext == ".g4") { if (iantlrfile != null) argserror += "Multiple input .g4 files\n"; iantlrfile = ifile; }
-                else if (ext == ".docx") { if (idocxfile != null) argserror += "Multiple input .docx files\n"; idocxfile = ifile; }
+                if (ext == ".g4")
+                {
+                    if (iantlrfile != null)
+                    {
+                        argserror += "Multiple input .g4 files\n";
+                    }
+                    iantlrfile = ifile;
+                }
+                else if (ext == ".docx") { if (idocxfile != null) { argserror += "Multiple input .docx files\n"; } idocxfile = ifile; }
                 else if (ext != ".md") { argserror += $"Not .g4 or .docx or .md '{ifile}'\n"; continue; }
-                else if (String.Equals(name, "readme.md", StringComparison.InvariantCultureIgnoreCase)) { if (ireadmefile != null) argserror += "Multiple readme.md files\n"; ireadmefile = ifile; }
+                else if (String.Equals(name, "readme.md", StringComparison.InvariantCultureIgnoreCase)) { if (ireadmefile != null) { argserror += "Multiple readme.md files\n"; } ireadmefile = ifile; }
                 else { imdfiles.Add(ifile); }
             }
             foreach (var ofile in ofiles)
@@ -77,9 +95,20 @@ namespace MarkdownConverter
                 }
             }
 
-            if (odocfile == null) argserror += "No output .docx file specified\n";
-            if (ireadmefile == null && ifiles.Count == 0) argserror += "No .md files supplied\n";
-            if (idocxfile == null) argserror += "No template.docx supplied\n";
+            if (odocfile == null)
+            {
+                argserror += "No output .docx file specified\n";
+            }
+
+            if (ireadmefile == null && ifiles.Count == 0)
+            {
+                argserror += "No .md files supplied\n";
+            }
+
+            if (idocxfile == null)
+            {
+                argserror += "No template.docx supplied\n";
+            }
 
             if (argserror != "")
             {
@@ -122,16 +151,23 @@ namespace MarkdownConverter
                         {
                             pp.Add(Tuple.Create(1, par));
                             var sublist = par as FSharp.Markdown.MarkdownParagraph.ListBlock;
-                            if (sublist != null) pp.AddRange(from subpars in sublist.items
-                                                             from subpar in subpars
-                                                             select Tuple.Create(2, subpar));
+                            if (sublist != null)
+                            {
+                                pp.AddRange(from subpars in sublist.items
+                                            from subpar in subpars
+                                            select Tuple.Create(2, subpar));
+                            }
                         }
                     }
                     foreach (var tpp in pp)
                     {
                         var level = tpp.Item1;
                         var spanpar = tpp.Item2 as FSharp.Markdown.MarkdownParagraph.Span;
-                        if (spanpar == null) continue;
+                        if (spanpar == null)
+                        {
+                            continue;
+                        }
+
                         var links = spanpar.body.OfType<FSharp.Markdown.MarkdownSpan.DirectLink>();
                         urls.AddRange(from link in links
                                       let title = string.Join("", link.body.OfType<FSharp.Markdown.MarkdownSpan.Literal>().Select(l => l.text))
@@ -165,8 +201,14 @@ namespace MarkdownConverter
                 var grammar = Antlr.ReadFile(iantlrfile);
                 foreach (var diff in CompareGrammars(grammar, md.Grammar))
                 {
-                    if (diff.authority == null) Report("MD21", "error", $"markdown has superfluous production '{diff.productionName}'", "mdspec2docx");
-                    else if (diff.copy == null) Report("MD22", "error", $"markdown lacks production '{diff.productionName}'", "mdspec2docx");
+                    if (diff.authority == null)
+                    {
+                        Report("MD21", "error", $"markdown has superfluous production '{diff.productionName}'", "mdspec2docx");
+                    }
+                    else if (diff.copy == null)
+                    {
+                        Report("MD22", "error", $"markdown lacks production '{diff.productionName}'", "mdspec2docx");
+                    }
                     else
                     {
                         Report("MD23", "error", $"production '{diff.productionName}' differs between markdown and antlr.g4", "mdspec2docx");
@@ -185,7 +227,11 @@ namespace MarkdownConverter
             if (odocfile != null)
             {
                 var odocfile2 = odocfile;
-                if (odocfile2 != odocfile) Report("MD26", "error", $"File '{odocfile}' was in use", "mdspec2docx");
+                if (odocfile2 != odocfile)
+                {
+                    Report("MD26", "error", $"File '{odocfile}' was in use", "mdspec2docx");
+                }
+
                 Console.WriteLine($"Writing '{Path.GetFileName(odocfile2)}'");
                 try
                 {
@@ -196,7 +242,10 @@ namespace MarkdownConverter
                     Report("MD27", "error", ex.Message, "mdspec2docx");
                     return 1;
                 }
-                if (odocfile2 != odocfile) return 1;
+                if (odocfile2 != odocfile)
+                {
+                    return 1;
+                }
             }
             return 0;
         }
@@ -220,7 +269,14 @@ namespace MarkdownConverter
             ToDictionary = g =>
             {
                 var d = new Dictionary<string, Production>();
-                foreach (var pp in g.Productions) if (pp.Name != null) d[pp.Name] = pp;
+                foreach (var pp in g.Productions)
+                {
+                    if (pp.Name != null)
+                    {
+                        d[pp.Name] = pp;
+                    }
+                }
+
                 return d;
             };
             var dauthority = ToDictionary(authority);
@@ -228,22 +284,44 @@ namespace MarkdownConverter
 
             foreach (var p in dauthority.Keys)
             {
-                if (!dcopy.ContainsKey(p)) continue;
+                if (!dcopy.ContainsKey(p))
+                {
+                    continue;
+                }
+
                 Production pauthority0 = dauthority[p], pcopy0 = dcopy[p];
                 string pauthority = Antlr.ToString(pauthority0), pcopy = Antlr.ToString(pcopy0);
-                if (pauthority == pcopy) continue;
+                if (pauthority == pcopy)
+                {
+                    continue;
+                }
+
                 yield return new ProductionDifference { productionName = p, authority = pauthority, copy = pcopy };
             }
 
             foreach (var p in dauthority.Keys)
             {
-                if (p == "start") continue;
-                if (!dcopy.ContainsKey(p)) yield return new ProductionDifference { productionName = p, authority = "<defined>", copy = null };
+                if (p == "start")
+                {
+                    continue;
+                }
+
+                if (!dcopy.ContainsKey(p))
+                {
+                    yield return new ProductionDifference { productionName = p, authority = "<defined>", copy = null };
+                }
             }
             foreach (var p in dcopy.Keys)
             {
-                if (p == "start") continue;
-                if (!dauthority.ContainsKey(p)) yield return new ProductionDifference { productionName = p, authority = null, copy = "<defined>" };
+                if (p == "start")
+                {
+                    continue;
+                }
+
+                if (!dauthority.ContainsKey(p))
+                {
+                    yield return new ProductionDifference { productionName = p, authority = null, copy = "<defined>" };
+                }
             }
         }
     }

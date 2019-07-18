@@ -17,7 +17,11 @@ namespace MarkdownConverter.Converter
             using (var templateDoc = WordprocessingDocument.Open(templateFile, false))
             using (var resultDoc = WordprocessingDocument.Create(outputFile, WordprocessingDocumentType.Document))
             {
-                foreach (var part in templateDoc.Parts) resultDoc.AddPart(part.OpenXmlPart, part.RelationshipId);
+                foreach (var part in templateDoc.Parts)
+                {
+                    resultDoc.AddPart(part.OpenXmlPart, part.RelationshipId);
+                }
+
                 var body = resultDoc.MainDocumentPart.Document.Body;
 
                 // We have to find the TOC, if one exists, and replace it...
@@ -33,21 +37,40 @@ namespace MarkdownConverter.Converter
                                               new FieldChar { FieldCharType = FieldCharValues.Separate });
                     var tocRunLast = new Run(new FieldChar { FieldCharType = FieldCharValues.End });
                     //
-                    for (int i = tocLast; i >= tocFirst; i--) body.RemoveChild(body.ChildElements[i]);
+                    for (int i = tocLast; i >= tocFirst; i--)
+                    {
+                        body.RemoveChild(body.ChildElements[i]);
+                    }
+
                     var afterToc = body.ChildElements[tocFirst];
                     //
                     for (int i = 0; i < spec.Sections.Count; i++)
                     {
                         var section = spec.Sections[i];
-                        if (section.Level > 2) continue;
+                        if (section.Level > 2)
+                        {
+                            continue;
+                        }
+
                         var p = new Paragraph();
-                        if (i == 0) p.AppendChild(tocRunFirst);
+                        if (i == 0)
+                        {
+                            p.AppendChild(tocRunFirst);
+                        }
+
                         p.AppendChild(new Hyperlink(new Run(new Text(section.Number + " " + section.Title))) { Anchor = section.BookmarkName });
-                        if (i == spec.Sections.Count - 1) p.AppendChild(tocRunLast);
+                        if (i == spec.Sections.Count - 1)
+                        {
+                            p.AppendChild(tocRunLast);
+                        }
+
                         p.ParagraphProperties = new ParagraphProperties(new ParagraphStyleId { Val = $"TOC{section.Level}" });
                         body.InsertBefore(p, afterToc);
                     }
-                    if (tocSec != null) body.InsertBefore(tocSec, afterToc);
+                    if (tocSec != null)
+                    {
+                        body.InsertBefore(tocSec, afterToc);
+                    }
                 }
 
                 var context = new ConversionContext();
@@ -119,13 +142,20 @@ namespace MarkdownConverter.Converter
             for (int i = 0; i < body.ChildElements.Count; i++)
             {
                 var p = body.ChildElements.GetItem(i) as Paragraph;
-                if (p == null) continue;
+                if (p == null)
+                {
+                    continue;
+                }
 
                 // The TOC might be a simple field
                 var sf = p.OfType<SimpleField>().FirstOrDefault();
                 if (sf != null && sf.Instruction.Value.Contains("TOC"))
                 {
-                    if (ifirst != -1) throw new Exception("Found start of TOC and then another simple TOC");
+                    if (ifirst != -1)
+                    {
+                        throw new Exception("Found start of TOC and then another simple TOC");
+                    }
+
                     ifirst = i; iLast = i; instr = sf.Instruction.Value;
                     break;
                 }
@@ -139,25 +169,52 @@ namespace MarkdownConverter.Converter
 
                 if (f1 != -1 && f2 != -1 && f3 != -1 && f2 > f1 && f3 > f2)
                 {
-                    if (ifirst != -1) throw new Exception("Found start of TOC and then another start of TOC");
+                    if (ifirst != -1)
+                    {
+                        throw new Exception("Found start of TOC and then another start of TOC");
+                    }
+
                     ifirst = i; instr = (runElements[f2] as FieldCode).Text;
                 }
                 if (f4 != -1 && f4 > f1 && f4 > f2 && f4 > f3)
                 {
                     iLast = i;
-                    if (ifirst != -1) break;
+                    if (ifirst != -1)
+                    {
+                        break;
+                    }
                 }
             }
 
-            if (ifirst == -1) return false;
-            if (iLast == -1) throw new Exception("Found start of TOC field, but not end");
+            if (ifirst == -1)
+            {
+                return false;
+            }
+
+            if (iLast == -1)
+            {
+                throw new Exception("Found start of TOC field, but not end");
+            }
+
             for (int i = ifirst; i <= iLast; i++)
             {
                 var p = body.ChildElements.GetItem(i) as Paragraph;
-                if (p == null) continue;
+                if (p == null)
+                {
+                    continue;
+                }
+
                 var sp = p.ParagraphProperties.OfType<SectionProperties>().FirstOrDefault();
-                if (sp == null) continue;
-                if (i != iLast) throw new Exception("Found section break within TOC field");
+                if (sp == null)
+                {
+                    continue;
+                }
+
+                if (i != iLast)
+                {
+                    throw new Exception("Found section break within TOC field");
+                }
+
                 secBreak = new Paragraph(new Run(new Text(""))) { ParagraphProperties = new ParagraphProperties(sp.CloneNode(true)) };
             }
             return true;

@@ -68,11 +68,26 @@ namespace MarkdownConverter.Spec
             }
             foreach (var c in Title)
             {
-                if (c >= 'a' && c <= 'z') Url += c;
-                else if (c >= 'A' && c <= 'Z') Url += char.ToLowerInvariant(c);
-                else if (c >= '0' && c <= '9') Url += c;
-                else if (c == '-' || c == '_') Url += c;
-                else if (c == ' ') Url += '-';
+                if (c >= 'a' && c <= 'z')
+                {
+                    Url += c;
+                }
+                else if (c >= 'A' && c <= 'Z')
+                {
+                    Url += char.ToLowerInvariant(c);
+                }
+                else if (c >= '0' && c <= '9')
+                {
+                    Url += c;
+                }
+                else if (c == '-' || c == '_')
+                {
+                    Url += c;
+                }
+                else if (c == ' ')
+                {
+                    Url += '-';
+                }
             }
             Url = filename + "#" + Url;
             BookmarkName = $"_Toc{count:00000}"; count++;
