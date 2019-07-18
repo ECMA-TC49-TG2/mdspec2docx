@@ -1,5 +1,6 @@
 ﻿using FSharp.Formatting.Common;
 using FSharp.Markdown;
+using Microsoft.FSharp.Core;
 
 namespace MarkdownConverter.Spec
 {
@@ -26,11 +27,6 @@ namespace MarkdownConverter.Spec
         {
             get
             {
-                // We have either a CurrentSection or a CurrentParagraph or both. Let's try to locate the error.
-                // Ideally this would be present inside the FSharp.MarkdownParagraph or FSharp.MarkdownSpan class itself.
-                // But it's not yet: https://github.com/tpetricek/FSharp.Formatting/issues/410
-                // So for the time being, we have to hack around to try to find it.
-
                 if (_loc != null)
                 {
                     return _loc;
@@ -46,65 +42,49 @@ namespace MarkdownConverter.Spec
                 }
                 else
                 {
-
-                    var src = System.IO.File.ReadAllText(File);
-
-                    string src2 = src; int iOffset = 0;
-                    bool foundSection = false, foundParagraph = false, foundSpan = false;
-                    if (Section != null)
+                    // Note: we now use the F# Markdown support for ranges, rather than finding text directly.
+                    // This produces slightly weaker diagnostics than before, but it avoids an awful lot of fiddly fuzzy text matching code.
+                    
+                    // TODO: Revisit SectionRef.Loc, possibly just exposing the paragraph directly.
+                    var maybeRange = GetRange(Span);
+                    if (maybeRange != null)
                     {
-                        var ss = Fuzzy.FindSection(src2, Section);
-                        if (ss != null) { src2 = src2.Substring(ss.Start, ss.Length); iOffset = ss.Start; foundSection = true; }
-                    }
-
-                    if (Paragraph != null)
-                    {
-                        var ss = Fuzzy.FindParagraph(src2, Paragraph);
-                        if (ss != null) { src2 = src2.Substring(ss.Start, ss.Length); iOffset += ss.Start; foundParagraph = true; }
-                        else
-                        {
-                            // If we can't find the paragraph within the current section, let's try to find it anywhere
-                            ss = Fuzzy.FindParagraph(src, Paragraph);
-                            if (ss != null) { src2 = src.Substring(ss.Start, ss.Length); iOffset = ss.Start; foundSection = false; foundParagraph = true; }
-                        }
-                    }
-
-                    if (Span != null)
-                    {
-                        var ss = Fuzzy.FindSpan(src2, Span);
-                        if (ss != null) { src2 = src.Substring(ss.Start, ss.Length); iOffset += ss.Start; foundSpan = true; }
-                    }
-
-                    var startPos = iOffset;
-                    var endPos = startPos + src2.Length;
-                    int startLine, startCol, endLine, endCol;
-                    if ((!foundSection && !foundParagraph) || !Fuzzy.FindLineCol(File, src, startPos, out startLine, out startCol, endPos, out endLine, out endCol))
-                    {
-                        _loc = File;
+                        var range = maybeRange.Value;
+                        _loc = $"{File}({range.StartLine},{range.StartColumn},{range.EndLine},{range.EndColumn})";
                     }
                     else
                     {
-                        startLine += 1;
-                        startCol += 1;
-                        endLine += 1;
-                        endCol += 1; // 1-based
-                        if (foundSpan)
+                        maybeRange = GetRange(Paragraph) ?? GetRange(Section.Loc.Paragraph);
+                        if (maybeRange == null)
                         {
-                            _loc = $"{File}({startLine},{startCol},{endLine},{endCol})";
-                        }
-                        else if (startLine == endLine)
-                        {
-                            _loc = $"{File}({startLine})";
+                            // We don't have any line or column information. Just report the filename.
+                            _loc = File;
                         }
                         else
                         {
-                            _loc = $"{File}({startLine}-{endLine})";
+                            var range = maybeRange.Value;
+                            _loc = range.StartLine == range.EndLine
+                                ? $"{File}({range.StartLine})"
+                                : $"{File}({range.StartLine}-{range.EndLine})";
                         }
                     }
                 }
+
                 return _loc;
             }
         }
-    }
 
+        // Each tagged type within the F# Markdown library for pargraph/span contains a "range" property, but
+        // I don't think there's a common way of getting it. So use reflection, horrible as that is...
+        private static MarkdownRange? GetRange(object obj)
+        {
+            if (obj == null)
+            {
+                return null;
+            }
+            var rangeProperty = obj.GetType().GetProperty("range");
+            var range = rangeProperty?.GetValue(obj) as FSharpOption<MarkdownRange>;
+            return range?.Value;
+        }
+    }
 }
