@@ -6,8 +6,16 @@ namespace MarkdownConverter.Spec
     {
         public int Compare(string x, string y)
         {
-            if (x.Length > y.Length) return -1;
-            if (x.Length < y.Length) return 1;
+            if (x.Length > y.Length)
+            {
+                return -1;
+            }
+
+            if (x.Length < y.Length)
+            {
+                return 1;
+            }
+
             return string.Compare(x, y);
         }
     }

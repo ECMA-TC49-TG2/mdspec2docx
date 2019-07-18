@@ -26,7 +26,7 @@
         /// Optional link to the spec.
         /// </summary>
         public string Link { get; set; }
-        
+
         /// <summary>
         /// Optional name of the spec link.
         /// </summary>

@@ -11,7 +11,11 @@ namespace MarkdownConverter.Grammar
         public static string ToString(EbnfGrammar grammar)
         {
             var r = $"grammar {grammar.Name};\r\n";
-            foreach (var p in grammar.Productions) r += ToString(p);
+            foreach (var p in grammar.Productions)
+            {
+                r += ToString(p);
+            }
+
             return r;
         }
 
@@ -28,11 +32,23 @@ namespace MarkdownConverter.Grammar
             else
             {
                 var r = $"{p.Name}:";
-                if (p.RuleStartsOnNewLine) r += "\r\n";
+                if (p.RuleStartsOnNewLine)
+                {
+                    r += "\r\n";
+                }
+
                 r += "\t";
-                if (p.RuleStartsOnNewLine) r += "| ";
+                if (p.RuleStartsOnNewLine)
+                {
+                    r += "| ";
+                }
+
                 r += $"{ToString(p.Ebnf)};";
-                if (!string.IsNullOrEmpty(p.Comment)) r += $"  //{p.Comment}";
+                if (!string.IsNullOrEmpty(p.Comment))
+                {
+                    r += $"  //{p.Comment}";
+                }
+
                 r += "\r\n";
                 return r;
             }
@@ -58,14 +74,23 @@ namespace MarkdownConverter.Grammar
                 case EbnfKind.ZeroOrOneOf:
                     var op = (node.Kind == EbnfKind.OneOrMoreOf ? "+" : (node.Kind == EbnfKind.ZeroOrMoreOf ? "*" : "?"));
                     if (node.Children[0].Kind == EbnfKind.Choice || node.Children[0].Kind == EbnfKind.Sequence)
+                    {
                         r = $"( {ToString(node.Children[0])} ){op}";
+                    }
                     else
+                    {
                         r = $"{ToString(node.Children[0])}{op}";
+                    }
+
                     break;
                 case EbnfKind.Choice:
                     foreach (var c in node.Children)
                     {
-                        if (prevElement != null) r += (r.Last() == '\t' ? "| " : " | ");
+                        if (prevElement != null)
+                        {
+                            r += (r.Last() == '\t' ? "| " : " | ");
+                        }
+
                         r += ToString(c);
                         prevElement = c;
                     }
@@ -73,8 +98,20 @@ namespace MarkdownConverter.Grammar
                 case EbnfKind.Sequence:
                     foreach (var c in node.Children)
                     {
-                        if (prevElement != null) r += (r == "" || r.Last() == '\t' ? "" : " ");
-                        if (c.Kind == EbnfKind.Choice) r += "( " + ToString(c) + " )"; else r += ToString(c);
+                        if (prevElement != null)
+                        {
+                            r += (r == "" || r.Last() == '\t' ? "" : " ");
+                        }
+
+                        if (c.Kind == EbnfKind.Choice)
+                        {
+                            r += "( " + ToString(c) + " )";
+                        }
+                        else
+                        {
+                            r += ToString(c);
+                        }
+
                         prevElement = c;
                     }
                     break;
@@ -82,8 +119,16 @@ namespace MarkdownConverter.Grammar
                     r = "???";
                     break;
             }
-            if (!string.IsNullOrEmpty(node.FollowingComment)) r += " //" + node.FollowingComment;
-            if (node.FollowingNewline) r += "\r\n\t";
+            if (!string.IsNullOrEmpty(node.FollowingComment))
+            {
+                r += " //" + node.FollowingComment;
+            }
+
+            if (node.FollowingNewline)
+            {
+                r += "\r\n\t";
+            }
+
             return r;
         }
 
@@ -96,7 +141,13 @@ namespace MarkdownConverter.Grammar
 
         private static IEnumerable<ColorizedWord> ColorizeAntlr(EbnfGrammar grammar)
         {
-            foreach (var p in grammar.Productions) foreach (var word in ColorizeAntlr(p)) yield return word;
+            foreach (var p in grammar.Productions)
+            {
+                foreach (var word in ColorizeAntlr(p))
+                {
+                    yield return word;
+                }
+            }
         }
 
         private static IEnumerable<ColorizedWord> ColorizeAntlr(Production p)
@@ -115,10 +166,22 @@ namespace MarkdownConverter.Grammar
                 yield return Col(p.Name, "Production");
                 yield return Col(":", "PlainText");
                 if (p.RuleStartsOnNewLine) { yield return null; yield return Col("\t| ", "PlainText"); }
-                else yield return Col(" ", "PlainText");
-                foreach (var word in ColorizeAntlr(p.Ebnf)) yield return word;
+                else
+                {
+                    yield return Col(" ", "PlainText");
+                }
+
+                foreach (var word in ColorizeAntlr(p.Ebnf))
+                {
+                    yield return word;
+                }
+
                 yield return Col(";", "PlainText");
-                if (!string.IsNullOrEmpty(p.Comment)) yield return Col("  //" + p.Comment, "Comment");
+                if (!string.IsNullOrEmpty(p.Comment))
+                {
+                    yield return Col("  //" + p.Comment, "Comment");
+                }
+
                 yield return null;
             }
         }
@@ -145,20 +208,32 @@ namespace MarkdownConverter.Grammar
                     if (node.Children[0].Kind == EbnfKind.Choice || node.Children[0].Kind == EbnfKind.Sequence)
                     {
                         yield return Col("( ", "PlainText");
-                        foreach (var word in ColorizeAntlr(node.Children[0])) yield return word;
+                        foreach (var word in ColorizeAntlr(node.Children[0]))
+                        {
+                            yield return word;
+                        }
+
                         yield return Col(" )", "PlainText");
                         yield return Col(op, "PlainText");
                     }
                     else
                     {
-                        foreach (var word in ColorizeAntlr(node.Children[0])) yield return word;
+                        foreach (var word in ColorizeAntlr(node.Children[0]))
+                        {
+                            yield return word;
+                        }
+
                         yield return Col(op, "PlainText");
                     }
                     break;
                 case EbnfKind.Choice:
                     foreach (var c in node.Children)
                     {
-                        if (prevElement != null) yield return Col(lastWasTab ? "| " : "| ", "PlainText");
+                        if (prevElement != null)
+                        {
+                            yield return Col(lastWasTab ? "| " : "| ", "PlainText");
+                        }
+
                         foreach (var word in ColorizeAntlr(c)) { yield return word; lastWasTab = (word?.Text == "\t"); }
                         prevElement = c;
                     }
@@ -166,11 +241,19 @@ namespace MarkdownConverter.Grammar
                 case EbnfKind.Sequence:
                     foreach (var c in node.Children)
                     {
-                        if (lastWasTab) yield return Col("  ", "PlainText");
+                        if (lastWasTab)
+                        {
+                            yield return Col("  ", "PlainText");
+                        }
+
                         if (c.Kind == EbnfKind.Choice)
                         {
                             yield return Col("( ", "PlainText");
-                            foreach (var word in ColorizeAntlr(c)) yield return word;
+                            foreach (var word in ColorizeAntlr(c))
+                            {
+                                yield return word;
+                            }
+
                             yield return Col(" )", "PlainText");
                             lastWasTab = false;
                         }
@@ -184,8 +267,16 @@ namespace MarkdownConverter.Grammar
                 default:
                     throw new NotSupportedException("Unrecognized Ebnf");
             }
-            if (!string.IsNullOrEmpty(node.FollowingWhitespace)) yield return Col(node.FollowingWhitespace, "Comment");
-            if (!string.IsNullOrEmpty(node.FollowingComment)) yield return Col(" //" + node.FollowingComment, "Comment");
+            if (!string.IsNullOrEmpty(node.FollowingWhitespace))
+            {
+                yield return Col(node.FollowingWhitespace, "Comment");
+            }
+
+            if (!string.IsNullOrEmpty(node.FollowingComment))
+            {
+                yield return Col(" //" + node.FollowingComment, "Comment");
+            }
+
             if (node.FollowingNewline) { yield return null; yield return Col("\t", "PlainText"); }
         }
 
@@ -220,14 +311,28 @@ namespace MarkdownConverter.Grammar
                 var t = tokens.First.Value; tokens.RemoveFirst();
                 if (t == "grammar")
                 {
-                    while (tokens.Any() && tokens.First.Value != ";") tokens.RemoveFirst();
-                    if (tokens.Any() && tokens.First.Value == ";") tokens.RemoveFirst();
-                    if (tokens.Any() && tokens.First.Value == "\r\n") tokens.RemoveFirst();
+                    while (tokens.Any() && tokens.First.Value != ";")
+                    {
+                        tokens.RemoveFirst();
+                    }
+
+                    if (tokens.Any() && tokens.First.Value == ";")
+                    {
+                        tokens.RemoveFirst();
+                    }
+
+                    if (tokens.Any() && tokens.First.Value == "\r\n")
+                    {
+                        tokens.RemoveFirst();
+                    }
                 }
                 else if (t.StartsWith("//"))
                 {
                     yield return new Production { Comment = t.Substring(2) };
-                    if (tokens.Any() && tokens.First.Value == "\r\n") tokens.RemoveFirst();
+                    if (tokens.Any() && tokens.First.Value == "\r\n")
+                    {
+                        tokens.RemoveFirst();
+                    }
                 }
                 else if (t == "\r\n")
                 {
@@ -244,22 +349,41 @@ namespace MarkdownConverter.Grammar
                     var newline = false;
                     while (tokens.Any() && string.IsNullOrWhiteSpace(tokens.First.Value))
                     {
-                        if (tokens.First.Value == "\r\n") newline = true;
+                        if (tokens.First.Value == "\r\n")
+                        {
+                            newline = true;
+                        }
+
                         tokens.RemoveFirst();
 
                     }
-                    if (tokens.First.Value != ":") throw new Exception($"After '{t}' expected ':' not {tokens.First.Value}");
+                    if (tokens.First.Value != ":")
+                    {
+                        throw new Exception($"After '{t}' expected ':' not {tokens.First.Value}");
+                    }
+
                     tokens.RemoveFirst();
                     GobbleUpComments(tokens, ref whitespace, ref comment, ref newline);
                     var p = ParseProduction(tokens, ref whitespace, ref comment);
                     GobbleUpComments(tokens, p);
-                    if (tokens.Any() && tokens.First.Value == ";") tokens.RemoveFirst();
-                    if (tokens.Any() && tokens.First.Value == "\r\n") tokens.RemoveFirst();
+                    if (tokens.Any() && tokens.First.Value == ";")
+                    {
+                        tokens.RemoveFirst();
+                    }
+
+                    if (tokens.Any() && tokens.First.Value == "\r\n")
+                    {
+                        tokens.RemoveFirst();
+                    }
+
                     var production = new Production { Comment = comment, Ebnf = p, Name = t, RuleStartsOnNewLine = newline };
                     while (tokens.Any() && tokens.First.Value.StartsWith("//"))
                     {
                         production.Comment += tokens.First.Value.Substring(2); tokens.RemoveFirst();
-                        if (tokens.First.Value == "\r\n") tokens.RemoveFirst();
+                        if (tokens.First.Value == "\r\n")
+                        {
+                            tokens.RemoveFirst();
+                        }
                     }
                     yield return production;
                 }
@@ -291,7 +415,11 @@ namespace MarkdownConverter.Grammar
                     pos += 2;
                     var t = "";
                     while (pos < s.Length && !"\r\n".Contains(s[pos])) { t += s[pos]; pos += 1; }
-                    if (t.Contains("*)")) throw new Exception("Comments may not include *)");
+                    if (t.Contains("*)"))
+                    {
+                        throw new Exception("Comments may not include *)");
+                    }
+
                     tokens.AddLast("//" + t);
                 }
                 else if (s[pos] == '\'')
@@ -302,10 +430,17 @@ namespace MarkdownConverter.Grammar
                         if (s.Substring(pos, 2) == "\\\\") { t += "\\"; pos += 2; }
                         else if (s.Substring(pos, 2) == "\\'") { t += "'"; pos += 2; }
                         else if (s.Substring(pos, 2) == "\\\"") { t += "\""; pos += 2; }
-                        else if (s.Substring(pos, 1) == "\\") throw new Exception("Terminals may not include \\ except in \\\\ or \\' or \\\"");
+                        else if (s.Substring(pos, 1) == "\\")
+                        {
+                            throw new Exception("Terminals may not include \\ except in \\\\ or \\' or \\\"");
+                        }
                         else { t += s[pos]; pos++; }
                     }
-                    if (t.Contains("\r") || t.Contains("\n")) throw new Exception("Terminals must be single-line");
+                    if (t.Contains("\r") || t.Contains("\n"))
+                    {
+                        throw new Exception("Terminals must be single-line");
+                    }
+
                     tokens.AddLast("'" + t + "'"); pos++;
                 }
                 else
@@ -324,7 +459,10 @@ namespace MarkdownConverter.Grammar
                 {
                     whitespace += s[pos]; pos++;
                 }
-                if (whitespace != "") tokens.AddLast(whitespace);
+                if (whitespace != "")
+                {
+                    tokens.AddLast(whitespace);
+                }
             }
 
             return tokens;
@@ -343,7 +481,11 @@ namespace MarkdownConverter.Grammar
 
         private static void GobbleUpComments(LinkedList<string> tokens, ref string extraWhitespace, ref string extraComments, ref bool hasNewline)
         {
-            if (tokens.Count == 0) return;
+            if (tokens.Count == 0)
+            {
+                return;
+            }
+
             while (true)
             {
                 if (tokens.First.Value.StartsWith("//"))
@@ -375,7 +517,11 @@ namespace MarkdownConverter.Grammar
 
         private static EbnfNode ParseProduction(LinkedList<string> tokens, ref string ExtraWhitespace, ref string ExtraComments)
         {
-            if (tokens.Count == 0) throw new Exception("empty input stream");
+            if (tokens.Count == 0)
+            {
+                throw new Exception("empty input stream");
+            }
+
             GobbleUpComments(tokens, ref ExtraWhitespace, ref ExtraComments, ref dummy);
             return ParsePar(tokens, ref ExtraWhitespace, ref ExtraComments);
         }
@@ -394,7 +540,11 @@ namespace MarkdownConverter.Grammar
                 node.FollowingNewline = followingNewline;
                 pp.AddLast(ParseSeq(tokens, ref extraWhitespace, ref extraComments));
             }
-            if (pp.Count == 1) return pp.First.Value;
+            if (pp.Count == 1)
+            {
+                return pp.First.Value;
+            }
+
             return new EbnfNode { Kind = EbnfKind.Choice, Children = pp.ToList() };
         }
 
@@ -410,7 +560,11 @@ namespace MarkdownConverter.Grammar
                 node.FollowingNewline = followingNewline;
                 pp.AddLast(ParseUnary(tokens, ref extraWhitespace, ref extraComments));
             }
-            if (pp.Count == 1) return pp.First.Value;
+            if (pp.Count == 1)
+            {
+                return pp.First.Value;
+            }
+
             return new EbnfNode { Kind = EbnfKind.Sequence, Children = pp.ToList() };
         }
 
@@ -451,7 +605,11 @@ namespace MarkdownConverter.Grammar
             {
                 tokens.RemoveFirst();
                 var p = ParseProduction(tokens, ref ExtraWhitespace, ref ExtraComments);
-                if (tokens.Count == 0 || tokens.First.Value != ")") throw new Exception("mismatched parentheses");
+                if (tokens.Count == 0 || tokens.First.Value != ")")
+                {
+                    throw new Exception("mismatched parentheses");
+                }
+
                 tokens.RemoveFirst();
                 GobbleUpComments(tokens, p);
                 return p;
@@ -476,7 +634,10 @@ namespace MarkdownConverter.Grammar
                 }
                 else
                 {
-                    if (t.Contains("'") && t.Contains("\"")) throw new Exception("A terminal must either contain no ' or no \"");
+                    if (t.Contains("'") && t.Contains("\""))
+                    {
+                        throw new Exception("A terminal must either contain no ' or no \"");
+                    }
                 }
                 GobbleUpComments(tokens, p);
                 return p;

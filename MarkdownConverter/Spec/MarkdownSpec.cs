@@ -71,7 +71,11 @@ namespace MarkdownConverter.Spec
                     {
                         var mdc = mdp as MarkdownParagraph.CodeBlock;
                         string code = mdc.code, lang = mdc.language;
-                        if (lang != "antlr") continue;
+                        if (lang != "antlr")
+                        {
+                            continue;
+                        }
+
                         var g = Antlr.ReadString(code, "");
                         Productions.Add(new ProductionRef(code, g.Productions));
                         foreach (var p in g.Productions)
@@ -171,7 +175,11 @@ namespace MarkdownConverter.Spec
             // To work around that, we'll encode this |, then decode it later
             for (int li = 0; li < lines.Length; li++)
             {
-                if (!lines[li].StartsWith("|")) continue;
+                if (!lines[li].StartsWith("|"))
+                {
+                    continue;
+                }
+
                 var codes = lines[li].Split('`');
                 for (int ci = 1; ci < codes.Length; ci += 2)
                 {
@@ -189,17 +197,26 @@ namespace MarkdownConverter.Spec
                 if (lines[li].StartsWith("*  "))
                 {
                     state = 1;
-                    if (string.IsNullOrWhiteSpace(lines[li + 1])) li++;
+                    if (string.IsNullOrWhiteSpace(lines[li + 1]))
+                    {
+                        li++;
+                    }
                 }
                 else if ((state == 1 || state == 2) && lines[li].StartsWith("   * "))
                 {
                     state = 2;
-                    if (string.IsNullOrWhiteSpace(lines[li + 1])) li++;
+                    if (string.IsNullOrWhiteSpace(lines[li + 1]))
+                    {
+                        li++;
+                    }
                 }
                 else if (state == 2 && lines[li].StartsWith("      ") && lines[li].Length > 6 && lines[li][6] != ' ')
                 {
                     state = 2;
-                    if (string.IsNullOrWhiteSpace(lines[li + 1])) li++;
+                    if (string.IsNullOrWhiteSpace(lines[li + 1]))
+                    {
+                        li++;
+                    }
                 }
                 else if (state == 2 && lines[li].StartsWith("   ") && lines[li].Length > 3 && lines[li][3] != ' ')
                 {

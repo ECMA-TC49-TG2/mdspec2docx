@@ -63,7 +63,7 @@ namespace MarkdownConverter.Converter
                 p.Append(Spans2Elements(spans));
                 p.AppendChild(new BookmarkEnd { Id = context.MaxBookmarkId.Value.ToString() });
                 yield return p;
-                
+
                 var i = sr.Url.IndexOf("#");
                 string currentSection = $"{sr.Url.Substring(0, i)} {new string('#', level)} {sr.Title} [{sr.Number}]";
                 reporter.Log(currentSection);
@@ -85,11 +85,18 @@ namespace MarkdownConverter.Converter
 
                 // Let's figure out what kind of list it is - ordered or unordered? nested?
                 var format0 = new[] { "1", "1", "1", "1" };
-                foreach (var item in flat) format0[item.Level] = (item.IsBulletOrdered ? "1" : "o");
+                foreach (var item in flat)
+                {
+                    format0[item.Level] = (item.IsBulletOrdered ? "1" : "o");
+                }
+
                 var format = string.Join("", format0);
 
                 var numberingPart = wordDocument.MainDocumentPart.NumberingDefinitionsPart ?? wordDocument.MainDocumentPart.AddNewPart<NumberingDefinitionsPart>("NumberingDefinitionsPart001");
-                if (numberingPart.Numbering == null) numberingPart.Numbering = new Numbering();
+                if (numberingPart.Numbering == null)
+                {
+                    numberingPart.Numbering = new Numbering();
+                }
 
                 Func<int, bool, Level> createLevel;
                 createLevel = (level, isOrdered) =>
@@ -105,8 +112,16 @@ namespace MarkdownConverter.Converter
                     r.Append(new NumberingFormat { Val = numformat });
                     r.Append(new LevelText { Val = levelText });
                     r.Append(new ParagraphProperties(new Indentation { Left = (540 + 360 * level).ToString(), Hanging = "360" }));
-                    if (levelText == "·") r.Append(new NumberingSymbolRunProperties(new RunFonts { Hint = FontTypeHintValues.Default, Ascii = "Symbol", HighAnsi = "Symbol", EastAsia = "Times new Roman", ComplexScript = "Times new Roman" }));
-                    if (levelText == "o") r.Append(new NumberingSymbolRunProperties(new RunFonts { Hint = FontTypeHintValues.Default, Ascii = "Courier New", HighAnsi = "Courier New", ComplexScript = "Courier New" }));
+                    if (levelText == "·")
+                    {
+                        r.Append(new NumberingSymbolRunProperties(new RunFonts { Hint = FontTypeHintValues.Default, Ascii = "Symbol", HighAnsi = "Symbol", EastAsia = "Times new Roman", ComplexScript = "Times new Roman" }));
+                    }
+
+                    if (levelText == "o")
+                    {
+                        r.Append(new NumberingSymbolRunProperties(new RunFonts { Hint = FontTypeHintValues.Default, Ascii = "Courier New", HighAnsi = "Courier New", ComplexScript = "Courier New" }));
+                    }
+
                     return r;
                 };
                 var level0 = createLevel(0, format[0] == '1');
@@ -136,17 +151,31 @@ namespace MarkdownConverter.Converter
                     if (content.IsParagraph || content.IsSpan)
                     {
                         var spans = (content.IsParagraph ? (content as MarkdownParagraph.Paragraph).body : (content as MarkdownParagraph.Span).body);
-                        if (item.HasBullet) yield return new Paragraph(Spans2Elements(spans)) { ParagraphProperties = new ParagraphProperties(new NumberingProperties(new ParagraphStyleId { Val = "ListParagraph" }, new NumberingLevelReference { Val = item.Level }, new NumberingId { Val = nid })) };
-                        else yield return new Paragraph(Spans2Elements(spans)) { ParagraphProperties = new ParagraphProperties(new Indentation { Left = calcIndent(item.Level) }) };
+                        if (item.HasBullet)
+                        {
+                            yield return new Paragraph(Spans2Elements(spans)) { ParagraphProperties = new ParagraphProperties(new NumberingProperties(new ParagraphStyleId { Val = "ListParagraph" }, new NumberingLevelReference { Val = item.Level }, new NumberingId { Val = nid })) };
+                        }
+                        else
+                        {
+                            yield return new Paragraph(Spans2Elements(spans)) { ParagraphProperties = new ParagraphProperties(new Indentation { Left = calcIndent(item.Level) }) };
+                        }
                     }
                     else if (content.IsQuotedBlock || content.IsCodeBlock)
                     {
                         foreach (var p in Paragraph2Paragraphs(content))
                         {
                             var props = p.GetFirstChild<ParagraphProperties>();
-                            if (props == null) { props = new ParagraphProperties(); p.InsertAt(props, 0); }
+                            if (props == null)
+                            {
+                                props = new ParagraphProperties();
+                                p.InsertAt(props, 0);
+                            }
                             var indent = props?.GetFirstChild<Indentation>();
-                            if (indent == null) { indent = new Indentation(); props.Append(indent); }
+                            if (indent == null)
+                            {
+                                indent = new Indentation();
+                                props.Append(indent);
+                            }
                             indent.Left = calcIndent(item.Level);
                             yield return p;
                         }
@@ -156,10 +185,18 @@ namespace MarkdownConverter.Converter
                         foreach (var p in Paragraph2Paragraphs(content))
                         {
                             var table = p as Table;
-                            if (table == null) { yield return p; continue; }
+                            if (table == null)
+                            {
+                                yield return p;
+                                continue;
+                            }
                             var tprops = table.GetFirstChild<TableProperties>();
                             var tindent = tprops?.GetFirstChild<TableIndentation>();
-                            if (tindent == null) throw new Exception("Ooops! Table is missing indentation");
+                            if (tindent == null)
+                            {
+                                throw new Exception("Ooops! Table is missing indentation");
+                            }
+
                             tindent.Width = int.Parse(calcIndent(item.Level));
                             yield return table;
                         }
@@ -207,14 +244,34 @@ namespace MarkdownConverter.Converter
 
                 foreach (var line in lines)
                 {
-                    if (onFirstLine) onFirstLine = false; else runs.Add(new Run(new Break()));
+                    if (onFirstLine)
+                    {
+                        onFirstLine = false;
+                    }
+                    else
+                    {
+                        runs.Add(new Run(new Break()));
+                    }
+
                     foreach (var word in line.Words)
                     {
                         var run = new Run();
                         var props = new RunProperties();
-                        if (word.Red != 0 || word.Green != 0 || word.Blue != 0) props.Append(new Color { Val = $"{word.Red:X2}{word.Green:X2}{word.Blue:X2}" });
-                        if (word.IsItalic) props.Append(new Italic());
-                        if (props.HasChildren) run.Append(props);
+                        if (word.Red != 0 || word.Green != 0 || word.Blue != 0)
+                        {
+                            props.Append(new Color { Val = $"{word.Red:X2}{word.Green:X2}{word.Blue:X2}" });
+                        }
+
+                        if (word.IsItalic)
+                        {
+                            props.Append(new Italic());
+                        }
+
+                        if (props.HasChildren)
+                        {
+                            run.Append(props);
+                        }
+
                         run.Append(new Text(word.Text) { Space = SpaceProcessingModeValues.Preserve });
                         runs.Add(run);
                     }
@@ -244,8 +301,16 @@ namespace MarkdownConverter.Converter
                 var align = mdt.alignments;
                 var rows = mdt.rows;
                 var table = new Table();
-                if (header == null) reporter.Error("MD10", "Github requires all tables to have header rows");
-                if (!header.Any(cell => cell.Length > 0)) header = null; // even if Github requires an empty header, we can at least cull it from Docx
+                if (header == null)
+                {
+                    reporter.Error("MD10", "Github requires all tables to have header rows");
+                }
+
+                if (!header.Any(cell => cell.Length > 0))
+                {
+                    header = null; // even if Github requires an empty header, we can at least cull it from Docx
+                }
+
                 var tstyle = new TableStyle { Val = "TableGrid" };
                 var tindent = new TableIndentation { Width = 360, Type = TableWidthUnitValues.Dxa };
                 var tborders = new TableBorders();
@@ -261,7 +326,11 @@ namespace MarkdownConverter.Converter
                 var ncols = align.Length;
                 for (int irow = -1; irow < rows.Length; irow++)
                 {
-                    if (irow == -1 && header == null) continue;
+                    if (irow == -1 && header == null)
+                    {
+                        continue;
+                    }
+
                     var mdrow = (irow == -1 ? header : rows[irow]);
                     var row = new TableRow();
                     for (int icol = 0; icol < Math.Min(ncols, mdrow.Length); icol++)
@@ -272,14 +341,30 @@ namespace MarkdownConverter.Converter
                         for (int ip = 0; ip < pars.Count; ip++)
                         {
                             var p = pars[ip] as Paragraph;
-                            if (p == null) { cell.Append(pars[ip]); continue; }
+                            if (p == null)
+                            {
+                                cell.Append(pars[ip]);
+                                continue;
+                            }
                             var props = new ParagraphProperties(new ParagraphStyleId { Val = "TableCellNormal" });
-                            if (align[icol].IsAlignCenter) props.Append(new Justification { Val = JustificationValues.Center });
-                            if (align[icol].IsAlignRight) props.Append(new Justification { Val = JustificationValues.Right });
+                            if (align[icol].IsAlignCenter)
+                            {
+                                props.Append(new Justification { Val = JustificationValues.Center });
+                            }
+
+                            if (align[icol].IsAlignRight)
+                            {
+                                props.Append(new Justification { Val = JustificationValues.Right });
+                            }
+
                             p.InsertAt(props, 0);
                             cell.Append(pars[ip]);
                         }
-                        if (pars.Count == 0) cell.Append(new Paragraph(new ParagraphProperties(new SpacingBetweenLines { After = "0" }), new Run(new Text(""))));
+                        if (pars.Count == 0)
+                        {
+                            cell.Append(new Paragraph(new ParagraphProperties(new SpacingBetweenLines { After = "0" }), new Run(new Text(""))));
+                        }
+
                         row.Append(cell);
                     }
                     table.Append(row);
@@ -304,9 +389,16 @@ namespace MarkdownConverter.Converter
                 var level = item.Level;
                 var isItemOrdered = item.IsBulletOrdered;
                 var content = item.Paragraph;
-                if (isOrdered.ContainsKey(level) && isOrdered[level] != isItemOrdered) reporter.Error("MD12", "List can't mix ordered and unordered items at same level");
+                if (isOrdered.ContainsKey(level) && isOrdered[level] != isItemOrdered)
+                {
+                    reporter.Error("MD12", "List can't mix ordered and unordered items at same level");
+                }
+
                 isOrdered[level] = isItemOrdered;
-                if (level > 3) reporter.Error("MD13", "Can't have more than 4 levels in a list");
+                if (level > 3)
+                {
+                    reporter.Error("MD13", "Can't have more than 4 levels in a list");
+                }
             }
             return flat;
         }
@@ -334,7 +426,10 @@ namespace MarkdownConverter.Converter
                     }
                     else if (mdp.IsListBlock)
                     {
-                        foreach (var subitem in FlattenList(mdp as MarkdownParagraph.ListBlock, level + 1)) yield return subitem;
+                        foreach (var subitem in FlattenList(mdp as MarkdownParagraph.ListBlock, level + 1))
+                        {
+                            yield return subitem;
+                        }
                     }
                     else if (mdp.IsTableBlock)
                     {
@@ -351,7 +446,13 @@ namespace MarkdownConverter.Converter
 
         IEnumerable<OpenXmlElement> Spans2Elements(IEnumerable<MarkdownSpan> mds, bool nestedSpan = false)
         {
-            foreach (var md in mds) foreach (var e in Span2Elements(md, nestedSpan)) yield return e;
+            foreach (var md in mds)
+            {
+                foreach (var e in Span2Elements(md, nestedSpan))
+                {
+                    yield return e;
+                }
+            }
         }
 
         IEnumerable<OpenXmlElement> Span2Elements(MarkdownSpan md, bool nestedSpan = false)
@@ -361,7 +462,10 @@ namespace MarkdownConverter.Converter
             {
                 var mdl = md as MarkdownSpan.Literal;
                 var s = MarkdownUtilities.UnescapeLiteral(mdl);
-                foreach (var r in Literal2Elements(s, nestedSpan)) yield return r;
+                foreach (var r in Literal2Elements(s, nestedSpan))
+                {
+                    yield return r;
+                }
             }
 
             else if (md.IsStrong || md.IsEmphasis)
@@ -376,8 +480,16 @@ namespace MarkdownConverter.Converter
                     var spans2 = spans.Select(s =>
                     {
                         var _ = "";
-                        if (s.IsEmphasis) { s = (s as MarkdownSpan.Emphasis).body.Single(); _ = "_"; }
-                        if (s.IsLiteral) return _ + (s as MarkdownSpan.Literal).text + _;
+                        if (s.IsEmphasis)
+                        {
+                            s = (s as MarkdownSpan.Emphasis).body.Single();
+                            _ = "_";
+                        }
+                        if (s.IsLiteral)
+                        {
+                            return _ + (s as MarkdownSpan.Literal).text + _;
+                        }
+
                         reporter.Error("MD15", $"something odd inside emphasis '{s.GetType().Name}' - only allowed emphasis and literal"); return "";
                     });
                     spans = new List<MarkdownSpan>() { MarkdownSpan.NewLiteral(string.Join("", spans2), FSharpOption<MarkdownRange>.None) };
@@ -411,7 +523,11 @@ namespace MarkdownConverter.Converter
                 // Convention inside our specs is that emphasis only ever contains literals,
                 // either to emphasis some human-text or to refer to an ANTLR-production
                 ProductionRef prodref = null;
-                if (!nestedSpan && md.IsEmphasis && (spans.Count() != 1 || !spans.First().IsLiteral)) reporter.Error("MD17", $"something odd inside emphasis");
+                if (!nestedSpan && md.IsEmphasis && (spans.Count() != 1 || !spans.First().IsLiteral))
+                {
+                    reporter.Error("MD17", $"something odd inside emphasis");
+                }
+
                 if (!nestedSpan && md.IsEmphasis && spans.Count() == 1 && spans.First().IsLiteral)
                 {
                     literal = (spans.First() as MarkdownSpan.Literal).text;
@@ -440,7 +556,11 @@ namespace MarkdownConverter.Converter
                     {
                         var style = (md.IsStrong ? new Bold() as OpenXmlElement : new Italic());
                         var run = e as Run;
-                        if (run != null) run.InsertAt(new RunProperties(style), 0);
+                        if (run != null)
+                        {
+                            run.InsertAt(new RunProperties(style), 0);
+                        }
+
                         yield return e;
                     }
                 }
@@ -482,14 +602,28 @@ namespace MarkdownConverter.Converter
                 }
 
                 var anchor = "";
-                if (spans.Count() == 1 && spans.First().IsLiteral) anchor = MarkdownUtilities.UnescapeLiteral(spans.First() as MarkdownSpan.Literal);
-                else if (spans.Count() == 1 && spans.First().IsInlineCode) anchor = (spans.First() as MarkdownSpan.InlineCode).code;
-                else { reporter.Error("MD18", $"Link anchor must be Literal or InlineCode, not '{md.GetType().Name}'"); yield break; }
+                if (spans.Count() == 1 && spans.First().IsLiteral)
+                {
+                    anchor = MarkdownUtilities.UnescapeLiteral(spans.First() as MarkdownSpan.Literal);
+                }
+                else if (spans.Count() == 1 && spans.First().IsInlineCode)
+                {
+                    anchor = (spans.First() as MarkdownSpan.InlineCode).code;
+                }
+                else
+                {
+                    reporter.Error("MD18", $"Link anchor must be Literal or InlineCode, not '{md.GetType().Name}'");
+                    yield break;
+                }
 
                 if (sections.ContainsKey(url))
                 {
                     var section = sections[url];
-                    if (anchor != section.Title) reporter.Warning("MD19", $"Mismatch: link anchor is '{anchor}', should be '{section.Title}'");
+                    if (anchor != section.Title)
+                    {
+                        reporter.Warning("MD19", $"Mismatch: link anchor is '{anchor}', should be '{section.Title}'");
+                    }
+
                     var txt = new Text("§" + section.Number) { Space = SpaceProcessingModeValues.Preserve };
                     var run = new Hyperlink(new Run(txt)) { Anchor = section.BookmarkName };
                     yield return run;
@@ -501,7 +635,11 @@ namespace MarkdownConverter.Converter
                     foreach (var element in Spans2Elements(spans))
                     {
                         var run = element as Run;
-                        if (run != null) run.InsertAt(new RunProperties(style), 0);
+                        if (run != null)
+                        {
+                            run.InsertAt(new RunProperties(style), 0);
+                        }
+
                         hyperlink.AppendChild(run);
                     }
                     yield return hyperlink;
@@ -565,12 +703,23 @@ namespace MarkdownConverter.Converter
 
         private static int BugWorkaroundIndent(ref MarkdownParagraph mdp, int level)
         {
-            if (!mdp.IsParagraph) return level;
+            if (!mdp.IsParagraph)
+            {
+                return level;
+            }
+
             var p = mdp as MarkdownParagraph.Paragraph;
             var spans = p.body;
-            if (spans.Count() == 0 || !spans[0].IsLiteral) return level;
+            if (spans.Count() == 0 || !spans[0].IsLiteral)
+            {
+                return level;
+            }
+
             var literal = spans[0] as MarkdownSpan.Literal;
-            if (!literal.text.StartsWith("ceci-n'est-pas-une-indent")) return level;
+            if (!literal.text.StartsWith("ceci-n'est-pas-une-indent"))
+            {
+                return level;
+            }
             //
             var literal2 = MarkdownSpan.NewLiteral(literal.text.Substring(25), FSharpOption<MarkdownRange>.None);
             var spans2 = Microsoft.FSharp.Collections.FSharpList<MarkdownSpan>.Cons(literal2, spans.Tail);

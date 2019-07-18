@@ -10,7 +10,7 @@ namespace MarkdownConverter.Grammar
 
         public List<EbnfNode> Children { get; set; }
         public string FollowingWhitespace { get; set; }
-        
+
         /// <summary>
         /// Does not contain *) or newline
         /// </summary>
