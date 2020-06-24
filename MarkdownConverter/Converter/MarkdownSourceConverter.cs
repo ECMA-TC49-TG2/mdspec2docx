@@ -578,6 +578,19 @@ namespace MarkdownConverter.Converter
                 yield return run;
             }
 
+            else if (md.IsLatexInlineMath)
+            {
+                var latex = md as MarkdownSpan.LatexInlineMath;
+                var code = latex.code;
+
+                // TODO: Make this look nice - if we actually need it. It's possible that it's only present
+                // before subscripts are replaced.
+                var txt = new Text(BugWorkaroundDecode(code)) { Space = SpaceProcessingModeValues.Preserve };
+                var props = new RunProperties(new RunStyle { Val = "CodeEmbedded" });
+                var run = new Run(txt) { RunProperties = props };
+                yield return run;
+            }
+
             else if (md.IsDirectLink || md.IsIndirectLink)
             {
                 IEnumerable<MarkdownSpan> spans;
