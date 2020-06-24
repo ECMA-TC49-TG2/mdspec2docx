@@ -6,17 +6,20 @@ namespace MarkdownConverter.Spec
 {
     internal class SectionRef
     {
-        // TODO: It would be nice if this could be read-only, but it's computed based on Level.
-        // (We could create a new SectionRef with the new number, admittedly, but it's probably not worth it.)
         /// <summary>
         /// Section number, e.g. 10.1.2
         /// </summary>
-        public string Number { get; set; }
+        public string Number { get;  }
 
         /// <summary>
-        /// Section title, e.g. "Goto Statement"
+        /// Section title, e.g. "10.1.2 Goto Statement"
         /// </summary>
         public string Title { get; }
+
+        /// <summary>
+        /// Section title not including the number, e.g. "Goto Statement"
+        /// </summary>
+        public string TitleWithoutNumber { get; }
 
         /// <summary>
         /// 1-based level, e.g. 3
@@ -32,11 +35,6 @@ namespace MarkdownConverter.Spec
         /// Name of generated bookmark, e.g. _Toc00023.
         /// </summary>
         public string BookmarkName { get; }
-
-        /// <summary>
-        /// Title in Markdown, e.g. "Goto Statement" or "`<code>`"
-        /// </summary>
-        public string MarkdownTitle; // "Goto Statement" or "`<code>`"
 
         /// <summary>
         /// Location in source Markdown.
@@ -55,16 +53,14 @@ namespace MarkdownConverter.Spec
             if (spans.Length == 1 && spans.First().IsLiteral)
             {
                 Title = MarkdownUtilities.UnescapeLiteral(spans.First() as MarkdownSpan.Literal).Trim();
-                MarkdownTitle = Title;
-            }
-            else if (spans.Length == 1 && spans.First().IsInlineCode)
-            {
-                Title = (spans.First() as MarkdownSpan.InlineCode).code.Trim();
-                MarkdownTitle = "`" + Title + "`";
+                var titleParts = Title.Split(new[] { ' ' }, 2);
+                Number = titleParts[0].TrimEnd('.');
+                // TODO: Figure out what to do for "Foreword" and "Introduction"
+                TitleWithoutNumber = titleParts.Last();
             }
             else
             {
-                throw new NotSupportedException("Heading must be a single literal/inlinecode");
+                throw new NotSupportedException("Heading must be a single literal");
             }
             foreach (var c in Title)
             {
