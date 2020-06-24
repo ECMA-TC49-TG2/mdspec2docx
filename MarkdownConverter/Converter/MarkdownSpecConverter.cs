@@ -58,7 +58,7 @@ namespace MarkdownConverter.Converter
                             p.AppendChild(tocRunFirst);
                         }
 
-                        p.AppendChild(new Hyperlink(new Run(new Text(section.Number + " " + section.Title))) { Anchor = section.BookmarkName });
+                        p.AppendChild(new Hyperlink(new Run(new Text(section.Title))) { Anchor = section.BookmarkName });
                         if (i == spec.Sections.Count - 1)
                         {
                             p.AppendChild(tocRunLast);

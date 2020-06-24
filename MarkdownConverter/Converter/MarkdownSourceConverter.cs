@@ -60,7 +60,7 @@ namespace MarkdownConverter.Converter
                 var p = new Paragraph { ParagraphProperties = props };
                 context.MaxBookmarkId.Value += 1;
                 p.AppendChild(new BookmarkStart { Name = sr.BookmarkName, Id = context.MaxBookmarkId.Value.ToString() });
-                p.Append(Spans2Elements(spans));
+                p.Append(Span2Elements(MarkdownSpan.NewLiteral(sr.TitleWithoutNumber, FSharpOption<MarkdownRange>.None)));
                 p.AppendChild(new BookmarkEnd { Id = context.MaxBookmarkId.Value.ToString() });
                 yield return p;
 
@@ -645,7 +645,7 @@ namespace MarkdownConverter.Converter
                 if (sections.ContainsKey(url))
                 {
                     var section = sections[url];
-                    var expectedAnchor = "§" + section.Title.Split(' ')[0].TrimEnd('.');
+                    var expectedAnchor = "§" + section.Number;
                     if (anchor != expectedAnchor)
                     {
                         reporter.Warning("MD19", $"Mismatch: link anchor is '{anchor}', should be '{expectedAnchor}'");
