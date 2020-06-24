@@ -620,12 +620,13 @@ namespace MarkdownConverter.Converter
                 if (sections.ContainsKey(url))
                 {
                     var section = sections[url];
-                    if (anchor != section.Title)
+                    var expectedAnchor = "§" + section.Title.Split(' ')[0].TrimEnd('.');
+                    if (anchor != expectedAnchor)
                     {
-                        reporter.Warning("MD19", $"Mismatch: link anchor is '{anchor}', should be '{section.Title}'");
+                        reporter.Warning("MD19", $"Mismatch: link anchor is '{anchor}', should be '{expectedAnchor}'");
                     }
 
-                    var txt = new Text("§" + section.Number) { Space = SpaceProcessingModeValues.Preserve };
+                    var txt = new Text(anchor) { Space = SpaceProcessingModeValues.Preserve };
                     var run = new Hyperlink(new Run(txt)) { Anchor = section.BookmarkName };
                     yield return run;
                 }
