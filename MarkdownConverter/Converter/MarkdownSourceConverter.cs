@@ -233,6 +233,7 @@ namespace MarkdownConverter.Converter
                     case "xml":
                         lines = Colorize.PlainText(code);
                         break;
+                    case "ANTLR":
                     case "antlr":
                         lines = Antlr.ColorizeAntlr(code);
                         break;
