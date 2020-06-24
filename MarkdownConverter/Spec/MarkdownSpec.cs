@@ -21,7 +21,7 @@ namespace MarkdownConverter.Spec
             Sources = sources;
 
             // (1) Add sections into the dictionary
-            int h1 = 0, h2 = 0, h3 = 0, h4 = 0;
+            int h1 = 0, h2 = 0, h3 = 0, h4 = 0, h5 = 0;
             string url = "", title = "";
 
             // (2) Turn all the antlr code blocks into a grammar
@@ -45,10 +45,11 @@ namespace MarkdownConverter.Spec
                             if (sr.Level == 1) { h1 += 1; h2 = 0; h3 = 0; h4 = 0; sr.Number = $"{h1}"; }
                             if (sr.Level == 2) { h2 += 1; h3 = 0; h4 = 0; sr.Number = $"{h1}.{h2}"; }
                             if (sr.Level == 3) { h3 += 1; h4 = 0; sr.Number = $"{h1}.{h2}.{h3}"; }
-                            if (sr.Level == 4) { h4 += 1; sr.Number = $"{h1}.{h2}.{h3}.{h4}"; }
-                            if (sr.Level > 4)
+                            if (sr.Level == 4) { h4 += 1; h5 = 0; sr.Number = $"{h1}.{h2}.{h3}.{h4}"; }
+                            if (sr.Level == 5) { h5 += 1; sr.Number = $"{h1}.{h2}.{h3}.{h4}.{h5}"; }
+                            if (sr.Level > 5)
                             {
-                                reporter.Error("MD01", "Only support heading depths up to ####");
+                                reporter.Error("MD01", "Only support heading depths up to #####");
                             }
                             else if (Sections.Any(s => s.Url == sr.Url))
                             {
