@@ -648,7 +648,7 @@ namespace MarkdownConverter.Converter
                 }
                 else
                 {
-                    reporter.Error("MD20", $"Hyperlink url '{url}' unrecognized - not a recognized heading, and not http");
+                    reporter.Error("MD28", $"Hyperlink url '{url}' unrecognized - not a recognized heading, and not http");
                 }
             }
 
