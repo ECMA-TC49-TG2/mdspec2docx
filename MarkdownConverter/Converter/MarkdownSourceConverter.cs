@@ -78,6 +78,18 @@ namespace MarkdownConverter.Converter
                 yield break;
             }
 
+            else if (md.IsQuotedBlock)
+            {
+                var mdq = md as MarkdownParagraph.QuotedBlock;
+                // TODO: Actually make this a block quote.
+                // See https://github.com/ECMA-TC49-TG2/conversion-to-markdown/issues/123
+                foreach (var paragraph in mdq.paragraphs.SelectMany(Paragraph2Paragraphs))
+                {
+                    yield return paragraph;
+                }
+                yield break;
+            }
+
             else if (md.IsListBlock)
             {
                 var mdl = md as MarkdownParagraph.ListBlock;
