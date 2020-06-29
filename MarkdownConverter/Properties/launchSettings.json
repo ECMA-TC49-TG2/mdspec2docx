@@ -2,8 +2,8 @@
   "profiles": {
     "MarkdownConverter": {
       "commandName": "Project",
-      "commandLineArgs": "*.md csharp.g4 template.docx -o newdebugspec.docx",
-      "workingDirectory": "C:\\Users\\jon\\Test\\Projects\\ECMA\\csharpspec\\"
+      "commandLineArgs": "*.md ../csharpspec/template.docx -o newdebugspec.docx",
+      "workingDirectory": "C:\\Users\\jon\\Test\\Projects\\ECMA\\conversion-to-markdown"
     }
   }
 }
