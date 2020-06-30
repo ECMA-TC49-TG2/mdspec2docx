@@ -93,18 +93,11 @@ namespace MarkdownConverter.Converter
             // We have to find the TOC, if one exists, and replace it...
             if (FindToc(body, out var tocFirst, out var tocLast, out var tocInstr, out var tocSec))
             {
-                var tocRunFirst = new Run(new FieldChar { FieldCharType = FieldCharValues.Begin },
-                                          new FieldCode { Text = tocInstr, Space = SpaceProcessingModeValues.Preserve },
-                                          new FieldChar { FieldCharType = FieldCharValues.Separate });
-                var tocRunLast = new Run(new FieldChar { FieldCharType = FieldCharValues.End });
-                //
                 for (int i = tocLast; i >= tocFirst; i--)
                 {
                     body.RemoveChild(body.ChildElements[i]);
                 }
-
                 var afterToc = body.ChildElements[tocFirst];
-                //
                 for (int i = 0; i < spec.Sections.Count; i++)
                 {
                     var section = spec.Sections[i];
@@ -114,16 +107,7 @@ namespace MarkdownConverter.Converter
                     }
 
                     var p = new Paragraph();
-                    if (i == 0)
-                    {
-                        p.AppendChild(tocRunFirst);
-                    }
-
                     p.AppendChild(new Hyperlink(new Run(new Text(section.Title))) { Anchor = section.BookmarkName });
-                    if (i == spec.Sections.Count - 1)
-                    {
-                        p.AppendChild(tocRunLast);
-                    }
 
                     p.ParagraphProperties = new ParagraphProperties(new ParagraphStyleId { Val = $"TOC{section.Level}" });
                     body.InsertBefore(p, afterToc);
