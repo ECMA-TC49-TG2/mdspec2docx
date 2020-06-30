@@ -251,6 +251,7 @@ namespace MarkdownConverter.Converter
                         lines = Colorize.VB(code);
                         break;
                     case "":
+                    case "console":
                     case "xml":
                         lines = Colorize.PlainText(code);
                         break;
