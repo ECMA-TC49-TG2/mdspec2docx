@@ -1,5 +1,6 @@
 ﻿using CSharp2Colorized;
 using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.CustomProperties;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using FSharp.Formatting.Common;
@@ -56,7 +57,15 @@ namespace MarkdownConverter.Converter
                 var spans = mdh.body;
                 var sr = sections[new SectionRef(mdh, filename).Url];
                 reporter.CurrentSection = sr;
-                var props = new ParagraphProperties(new ParagraphStyleId() { Val = $"Heading{level}" });
+                var properties = new List<OpenXmlElement>
+                {
+                    new ParagraphStyleId { Val = $"Heading{level}" }
+                };
+                if (sr.Number is null)
+                {
+                    properties.Add(new NumberingProperties(new NumberingLevelReference { Val = 0 }, new NumberingId { Val = 0 }));
+                }
+                var props = new ParagraphProperties(properties);
                 var p = new Paragraph { ParagraphProperties = props };
                 context.MaxBookmarkId.Value += 1;
                 p.AppendChild(new BookmarkStart { Name = sr.BookmarkName, Id = context.MaxBookmarkId.Value.ToString() });
@@ -645,6 +654,7 @@ namespace MarkdownConverter.Converter
                 if (sections.ContainsKey(url))
                 {
                     var section = sections[url];
+                    // Note: this expected anchor format means we can't link to something that doesn't have a section number.
                     var expectedAnchor = "§" + section.Number;
                     if (anchor != expectedAnchor)
                     {
