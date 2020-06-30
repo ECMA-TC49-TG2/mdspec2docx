@@ -24,54 +24,7 @@ namespace MarkdownConverter.Converter
 
                 var body = resultDoc.MainDocumentPart.Document.Body;
 
-                // We have to find the TOC, if one exists, and replace it...
-                var tocFirst = -1;
-                var tocLast = -1;
-                var tocInstr = "";
-                var tocSec = null as Paragraph;
-
-                if (FindToc(body, out tocFirst, out tocLast, out tocInstr, out tocSec))
-                {
-                    var tocRunFirst = new Run(new FieldChar { FieldCharType = FieldCharValues.Begin },
-                                              new FieldCode { Text = tocInstr, Space = SpaceProcessingModeValues.Preserve },
-                                              new FieldChar { FieldCharType = FieldCharValues.Separate });
-                    var tocRunLast = new Run(new FieldChar { FieldCharType = FieldCharValues.End });
-                    //
-                    for (int i = tocLast; i >= tocFirst; i--)
-                    {
-                        body.RemoveChild(body.ChildElements[i]);
-                    }
-
-                    var afterToc = body.ChildElements[tocFirst];
-                    //
-                    for (int i = 0; i < spec.Sections.Count; i++)
-                    {
-                        var section = spec.Sections[i];
-                        if (section.Level > 2)
-                        {
-                            continue;
-                        }
-
-                        var p = new Paragraph();
-                        if (i == 0)
-                        {
-                            p.AppendChild(tocRunFirst);
-                        }
-
-                        p.AppendChild(new Hyperlink(new Run(new Text(section.Title))) { Anchor = section.BookmarkName });
-                        if (i == spec.Sections.Count - 1)
-                        {
-                            p.AppendChild(tocRunLast);
-                        }
-
-                        p.ParagraphProperties = new ParagraphProperties(new ParagraphStyleId { Val = $"TOC{section.Level}" });
-                        body.InsertBefore(p, afterToc);
-                    }
-                    if (tocSec != null)
-                    {
-                        body.InsertBefore(tocSec, afterToc);
-                    }
-                }
+                ReplaceTableOfContents(spec, body);
 
                 var context = new ConversionContext();
                 context.MaxBookmarkId.Value = 1 + body.Descendants<BookmarkStart>().Max(bookmark => int.Parse(bookmark.Id));
@@ -132,6 +85,53 @@ namespace MarkdownConverter.Converter
                 var otherproductions = string.Join(",", otherproductionset);
 
                 // FIXME: We're not using these last variables...
+            }
+        }
+
+        private static void ReplaceTableOfContents(MarkdownSpec spec, Body body)
+        {
+            // We have to find the TOC, if one exists, and replace it...
+            if (FindToc(body, out var tocFirst, out var tocLast, out var tocInstr, out var tocSec))
+            {
+                var tocRunFirst = new Run(new FieldChar { FieldCharType = FieldCharValues.Begin },
+                                          new FieldCode { Text = tocInstr, Space = SpaceProcessingModeValues.Preserve },
+                                          new FieldChar { FieldCharType = FieldCharValues.Separate });
+                var tocRunLast = new Run(new FieldChar { FieldCharType = FieldCharValues.End });
+                //
+                for (int i = tocLast; i >= tocFirst; i--)
+                {
+                    body.RemoveChild(body.ChildElements[i]);
+                }
+
+                var afterToc = body.ChildElements[tocFirst];
+                //
+                for (int i = 0; i < spec.Sections.Count; i++)
+                {
+                    var section = spec.Sections[i];
+                    if (section.Level > 2)
+                    {
+                        continue;
+                    }
+
+                    var p = new Paragraph();
+                    if (i == 0)
+                    {
+                        p.AppendChild(tocRunFirst);
+                    }
+
+                    p.AppendChild(new Hyperlink(new Run(new Text(section.Title))) { Anchor = section.BookmarkName });
+                    if (i == spec.Sections.Count - 1)
+                    {
+                        p.AppendChild(tocRunLast);
+                    }
+
+                    p.ParagraphProperties = new ParagraphProperties(new ParagraphStyleId { Val = $"TOC{section.Level}" });
+                    body.InsertBefore(p, afterToc);
+                }
+                if (tocSec != null)
+                {
+                    body.InsertBefore(tocSec, afterToc);
+                }
             }
         }
 
