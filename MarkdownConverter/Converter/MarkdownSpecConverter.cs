@@ -3,10 +3,8 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using MarkdownConverter.Spec;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 
 namespace MarkdownConverter.Converter
 {
@@ -42,49 +40,6 @@ namespace MarkdownConverter.Converter
                         body.AppendChild(p);
                     }
                 }
-
-                var reporter = new Reporter(filename: null);
-
-                // I wonder if there were any oddities? ...
-                // Terms that were referenced before their definition?
-                var termset = new HashSet<string>(context.Terms.Keys);
-                var italicset = new HashSet<string>(context.Italics.Where(i => i.Kind == ItalicUse.ItalicUseKind.Italic).Select(i => i.Literal));
-                italicset.IntersectWith(termset);
-                foreach (var s in italicset)
-                {
-                    var use = context.Italics.First(i => i.Literal == s);
-                    var def = context.Terms[s];
-                    reporter.Warning("MD05", $"Term '{s}' used before definition", use.Loc);
-                    reporter.Warning("MD05b", $"... definition location of '{s}' for previous warning", def.Loc);
-                }
-
-                // Terms that are also production names?
-                var productionset = new HashSet<string>(spec.Grammar.Productions.Where(p => p.Name != null).Select(p => p.Name));
-                productionset.IntersectWith(termset);
-                foreach (var s in productionset)
-                {
-                    var def = context.Terms[s];
-                    reporter.Warning("MD06", $"Terms '{s}' is also a grammar production name", def.Loc);
-                }
-
-                // Terms that were defined but never used?
-                var termrefset = new HashSet<string>(context.Italics.Where(i => i.Kind == ItalicUse.ItalicUseKind.Term).Select(i => i.Literal));
-                termset.RemoveWhere(t => termrefset.Contains(t));
-                foreach (var s in termset)
-                {
-                    var def = context.Terms[s];
-                    reporter.Warning("MD07", $"Term '{s}' is defined but never used", def.Loc);
-                }
-
-                // Which single-word production-names appear in italics?
-                var italicproductionset = new HashSet<string>(context.Italics.Where(i => !i.Literal.Contains("_") && i.Kind == ItalicUse.ItalicUseKind.Production).Select(i => i.Literal));
-                var italicproductions = string.Join(",", italicproductionset);
-
-                // What are the single-word production names that don't appear in italics?
-                var otherproductionset = new HashSet<string>(spec.Grammar.Productions.Where(p => p.Name != null && !p.Name.Contains("_") && !italicproductionset.Contains(p.Name)).Select(p => p.Name));
-                var otherproductions = string.Join(",", otherproductionset);
-
-                // FIXME: We're not using these last variables...
             }
         }
 
