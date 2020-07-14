@@ -684,7 +684,11 @@ namespace MarkdownConverter.Converter
                 }
                 else
                 {
-                    reporter.Error("MD28", $"Hyperlink url '{url}' unrecognized - not a recognized heading, and not http");
+                    // TODO: Make this report an error unconditionally once the subscript "latex-like" Markdown is removed.
+                    if (url != "")
+                    {
+                        reporter.Error("MD28", $"Hyperlink url '{url}' unrecognized - not a recognized heading, and not http");
+                    }
                 }
             }
 
