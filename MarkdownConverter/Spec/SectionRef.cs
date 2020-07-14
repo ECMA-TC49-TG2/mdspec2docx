@@ -7,7 +7,7 @@ namespace MarkdownConverter.Spec
     internal class SectionRef
     {
         /// <summary>
-        /// Section number, e.g. 10.1.2, or null for sections without a number (e.g. Foreword).
+        /// Section number, e.g. 10.1.2, or A.3 or null for sections without a number (e.g. Foreword).
         /// </summary>
         public string Number { get;  }
 
@@ -53,7 +53,7 @@ namespace MarkdownConverter.Spec
             if (spans.Length == 1 && spans.First().IsLiteral)
             {
                 Title = MarkdownUtilities.UnescapeLiteral(spans.First() as MarkdownSpan.Literal).Trim();
-                if (char.IsDigit(Title[0]))
+                if (char.IsDigit(Title[0]) || (Title[0] >= 'A' && Title[0] <= 'D' && Title[1] == '.'))
                 {
                     var titleParts = Title.Split(new[] { ' ' }, 2);
                     Number = titleParts[0];
