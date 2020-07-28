@@ -655,11 +655,15 @@ namespace MarkdownConverter.Converter
                 if (sections.ContainsKey(url))
                 {
                     var section = sections[url];
-                    // Note: this expected anchor format means we can't link to something that doesn't have a section number.
-                    var expectedAnchor = "§" + section.Number;
-                    if (anchor != expectedAnchor)
+                    // If we're linking to something with a section number, we know what the link text should be.
+                    // (There are a few links that aren't to numbered sections, e.g. to "Annex C".)
+                    if (section.Number is object)
                     {
-                        reporter.Warning("MD19", $"Mismatch: link anchor is '{anchor}', should be '{expectedAnchor}'");
+                        var expectedAnchor = "§" + section.Number;
+                        if (anchor != expectedAnchor)
+                        {
+                            reporter.Warning("MD19", $"Mismatch: link anchor is '{anchor}', should be '{expectedAnchor}'");
+                        }
                     }
 
                     var txt = new Text(anchor) { Space = SpaceProcessingModeValues.Preserve };
